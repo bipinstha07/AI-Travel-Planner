@@ -5,6 +5,8 @@ function Home() {
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [messageSent, setMessageSent] = useState(false)
+  const [result, setResult] = useState<any | null>(null)
+  const [inputs, setInputs] = useState<string[]>([])
   
   // All 20 suggestions
   const allSuggestions = [
@@ -54,6 +56,7 @@ function Home() {
     }
 
     setIsLoading(true)
+    const currentQuery = inputValue.trim()
 
     try {
       const response = await fetch('http://localhost:8008/api/v1/queries', {
@@ -62,7 +65,7 @@ function Home() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          query: inputValue,
+          query: currentQuery,
         }),
       })
 
@@ -72,20 +75,30 @@ function Home() {
 
       const data = await response.json()
       console.log('Response:', data)
-      
+      setResult(data)
       // Clear input after successful submission
       setInputValue('')
       setMessageSent(true)
+      // Refresh inputs list from backend
+      try {
+        const inputsResp = await fetch('http://localhost:8008/api/v1/inputs')
+        const inputsJson = await inputsResp.json()
+        setInputs(Array.isArray(inputsJson.items) ? inputsJson.items : [])
+      } catch {}
     } catch (err) {
       // Use dummy response instead of showing error
       const dummyResponse = {
         id: Date.now(),
-        query: inputValue,
-        response: 'Thank you for your query! Our AI travel planner is processing your request and will provide you with personalized travel recommendations soon.',
+        input: currentQuery,
+        destination: 'Sample Destination',
+        itinerary: [
+          { day: 1, activities: ['Sample activity 1', 'Sample activity 2'] },
+          { day: 2, activities: ['Sample activity 3'] },
+        ],
         status: 'success'
       }
       console.log('Dummy Response:', dummyResponse)
-      
+      setResult(dummyResponse)
       // Clear input after submission
       setInputValue('')
       setMessageSent(true)
@@ -110,6 +123,65 @@ function Home() {
       )}
 
       <div className='w-full  max-w-3xl'>
+        {messageSent && (
+          <>
+            {result && (
+              <div className="max-w-3xl mx-auto mt-6 p-4 border rounded-lg bg-white shadow-sm">
+                <div className="font-semibold text-gray-800 mb-2">Planner response</div>
+                {result?.analysis?.category && (
+                  <div className="mb-3">
+                    <div className="text-gray-700 font-medium">Category</div>
+                    <div className="text-gray-900">
+                      {result.analysis.category}
+                      {result?.analysis?.ml?.confidence !== undefined && (
+                        <span className="text-gray-600 ml-2">
+                          (confidence: {Math.round((result.analysis.ml.confidence || 0) * 100)}%)
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+                {Array.isArray(result?.analysis?.preferences) && result.analysis.preferences.length > 0 && (
+                  <div className="mb-3">
+                    <div className="text-gray-700 font-medium">Preferences</div>
+                    <div className="text-gray-900">{result.analysis.preferences.join(', ')}</div>
+                  </div>
+                )}
+                {Array.isArray(result?.suggestions) && result.suggestions.length > 0 && (
+                  <div className="mb-3">
+                    <div className="text-gray-700 font-medium">Suggestions</div>
+                    <ul className="list-disc ml-5 text-gray-900">
+                      {result.suggestions.map((s: any, i: number) => (
+                        <li key={i}>
+                          <span className="font-semibold">{s.name}, {s.country}</span>: {s.why}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {Array.isArray(result?.next_steps) && result.next_steps.length > 0 && (
+                  <div className="mb-1">
+                    <div className="text-gray-700 font-medium">Next steps</div>
+                    <ul className="list-disc ml-5 text-gray-900">
+                      {result.next_steps.map((n: string, i: number) => (
+                        <li key={i}>{n}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="max-w-3xl mx-auto mt-6 p-4 border rounded-lg bg-gray-50">
+              <div className="font-semibold text-gray-800">Submitted queries:</div>
+              <ul className="list-disc ml-5 text-gray-900">
+                {inputs.map((text, idx) => (
+                  <li key={idx}>{text}</li>
+                ))}
+              </ul>
+            </div>
+          </>
+        )}
         <div className={`flex items-center gap-3 bg-white rounded-full border border-gray-200  shadow-md px-4 py-3 ${messageSent ? 'fixed bottom-10 left-1/2 transform -translate-x-1/2' : ''}`}>
           {/* Left: plus icon button */}
          
@@ -176,6 +248,8 @@ function Home() {
       </div>
     </div>
     {!messageSent && <PlanDestination />}
+
+    
 
 <div className={`${messageSent ? 'absolute bottom-0 w-full' : 'block'}`}>
   <Footer />
