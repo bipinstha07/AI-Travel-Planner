@@ -1,12 +1,24 @@
 import { useState } from 'react'
+import { classifyIntent, generateItinerary, plan } from '../api/client'
+import type { IntentResponse, ItineraryResponse, PlanResponse } from '../api/client'
 import PlanDestination from './smaller-component/PlanDestination'
 import Footer from '../footer/Footer'
 function Home() {
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [messageSent, setMessageSent] = useState(false)
-  const [result, setResult] = useState<any | null>(null)
-  const [inputs, setInputs] = useState<string[]>([])
+  const [intentResult, setIntentResult] = useState<IntentResponse | null>(null)
+  const [intentError, setIntentError] = useState<string | null>(null)
+  const [itinerary, setItinerary] = useState<ItineraryResponse | null>(null)
+  const [itLoading, setItLoading] = useState(false)
+  const [itError, setItError] = useState<string | null>(null)
+  const [destination, setDestination] = useState('')
+  const [days, setDays] = useState(5)
+  const [preferences, setPreferences] = useState('')
+  
+  const [botMessage, setBotMessage] = useState<string | null>(null)
+  const [recommendations, setRecommendations] = useState<string[]>([])
+  const [selectedDest, setSelectedDest] = useState<string | null>(null)
   
   // All 20 suggestions
   const allSuggestions = [
@@ -49,59 +61,39 @@ function Home() {
     setSuggestions(getRandomSuggestions())
   }
 
+  
+
   const handleSubmit = async () => {
-    console.log('Input Value:', inputValue)
-    if (!inputValue.trim()) {
-      return
-    }
-
+    if (!inputValue.trim()) return
     setIsLoading(true)
-    const currentQuery = inputValue.trim()
-
+    setIntentError(null)
+    setItinerary(null)
     try {
-      const response = await fetch('http://localhost:8008/api/v1/queries', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          query: currentQuery,
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-
-      const data = await response.json()
-      console.log('Response:', data)
-      setResult(data)
-      // Clear input after successful submission
-      setInputValue('')
+      const planRes: PlanResponse = await plan(inputValue.trim())
       setMessageSent(true)
-      // Refresh inputs list from backend
-      try {
-        const inputsResp = await fetch('http://localhost:8008/api/v1/inputs')
-        const inputsJson = await inputsResp.json()
-        setInputs(Array.isArray(inputsJson.items) ? inputsJson.items : [])
-      } catch {}
-    } catch (err) {
-      // Use dummy response instead of showing error
-      const dummyResponse = {
-        id: Date.now(),
-        input: currentQuery,
-        destination: 'Sample Destination',
-        itinerary: [
-          { day: 1, activities: ['Sample activity 1', 'Sample activity 2'] },
-          { day: 2, activities: ['Sample activity 3'] },
-        ],
-        status: 'success'
+      setRecommendations(planRes.recommendations)
+      const intentLabel = planRes.intent
+      const opts = planRes.recommendations
+      const formatOptions = (arr: string[]) => {
+        const items = arr.filter(Boolean).slice(0, 3)
+        if (items.length === 0) return ''
+        if (items.length === 1) return items[0]
+        if (items.length === 2) return `${items[0]} or ${items[1]}`
+        return `${items[0]}, ${items[1]}, or ${items[2]}`
       }
-      console.log('Dummy Response:', dummyResponse)
-      setResult(dummyResponse)
-      // Clear input after submission
+      const msg = `Got it — you're looking for a ${intentLabel} destination! Here are a few great options: ${formatOptions(opts)}. Which one sounds best to you?`
+      setBotMessage(msg)
+      // Seed itinerary inputs based on recommendations
+      const first = opts[0] || 'Bali'
+      setDestination(first)
+      setPreferences((p) => p || intentLabel)
       setInputValue('')
-      setMessageSent(true)
+      // Kick off classification in background (optional scores card)
+      classifyIntent({ text: inputValue.trim() })
+        .then((res) => setIntentResult(res))
+        .catch(() => {})
+    } catch (e: any) {
+      setIntentError(e?.message || 'Failed to classify')
     } finally {
       setIsLoading(false)
     }
@@ -111,6 +103,26 @@ function Home() {
     if (e.key === 'Enter' && !isLoading) {
       handleSubmit()
     }
+  }
+
+  const handleGenerate = async () => {
+    if (!destination.trim()) return
+    setItLoading(true)
+    setItError(null)
+    try {
+      const prefs = preferences.split(',').map(s => s.trim()).filter(Boolean)
+      const res = await generateItinerary({ destination: destination.trim(), days, preferences: prefs })
+      setItinerary(res)
+    } catch (e: any) {
+      setItError(e?.message || 'Failed to generate itinerary')
+    } finally {
+      setItLoading(false)
+    }
+  }
+
+  const handleChoose = (name: string) => {
+    setSelectedDest(name)
+    setDestination(name)
   }
 
   return (
@@ -125,61 +137,93 @@ function Home() {
       <div className='w-full  max-w-3xl'>
         {messageSent && (
           <>
-            {result && (
+            {botMessage && (
               <div className="max-w-3xl mx-auto mt-6 p-4 border rounded-lg bg-white shadow-sm">
-                <div className="font-semibold text-gray-800 mb-2">Planner response</div>
-                {result?.analysis?.category && (
-                  <div className="mb-3">
-                    <div className="text-gray-700 font-medium">Category</div>
-                    <div className="text-gray-900">
-                      {result.analysis.category}
-                      {result?.analysis?.ml?.confidence !== undefined && (
-                        <span className="text-gray-600 ml-2">
-                          (confidence: {Math.round((result.analysis.ml.confidence || 0) * 100)}%)
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                )}
-                {Array.isArray(result?.analysis?.preferences) && result.analysis.preferences.length > 0 && (
-                  <div className="mb-3">
-                    <div className="text-gray-700 font-medium">Preferences</div>
-                    <div className="text-gray-900">{result.analysis.preferences.join(', ')}</div>
-                  </div>
-                )}
-                {Array.isArray(result?.suggestions) && result.suggestions.length > 0 && (
-                  <div className="mb-3">
-                    <div className="text-gray-700 font-medium">Suggestions</div>
-                    <ul className="list-disc ml-5 text-gray-900">
-                      {result.suggestions.map((s: any, i: number) => (
-                        <li key={i}>
-                          <span className="font-semibold">{s.name}, {s.country}</span>: {s.why}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {Array.isArray(result?.next_steps) && result.next_steps.length > 0 && (
-                  <div className="mb-1">
-                    <div className="text-gray-700 font-medium">Next steps</div>
-                    <ul className="list-disc ml-5 text-gray-900">
-                      {result.next_steps.map((n: string, i: number) => (
-                        <li key={i}>{n}</li>
-                      ))}
-                    </ul>
-                  </div>
+                <div className="text-gray-800 mb-3">{botMessage}</div>
+                <div className="flex flex-wrap gap-2">
+                  {recommendations.map((r) => (
+                    <button key={r} onClick={() => handleChoose(r)} className="px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-800 rounded-full">
+                      {r}
+                    </button>
+                  ))}
+                </div>
+                {selectedDest && (
+                  <div className="mt-3 text-green-700">Thank you for choosing {selectedDest}.</div>
                 )}
               </div>
             )}
-
+            {intentResult && (
+              <div className="max-w-3xl mx-auto mt-6 p-4 border rounded-lg bg-white shadow-sm">
+                <div className="font-semibold text-gray-800 mb-2">Intent classification</div>
+                <div className="mb-3">
+                  <div className="text-gray-700 font-medium">Top label</div>
+                  <div className="text-gray-900">
+                    {intentResult.label}
+                    <span className="text-gray-600 ml-2">
+                      (confidence: {Math.round((intentResult.confidence || 0) * 100)}%)
+                    </span>
+                  </div>
+                </div>
+                <div className="mb-3">
+                  <div className="text-gray-700 font-medium">Scores</div>
+                  <ul className="list-disc ml-5 text-gray-900">
+                    {Object.entries(intentResult.scores).map(([label, score]) => (
+                      <li key={label}>{label}: {Math.round(score * 100)}%</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
             <div className="max-w-3xl mx-auto mt-6 p-4 border rounded-lg bg-gray-50">
-              <div className="font-semibold text-gray-800">Submitted queries:</div>
-              <ul className="list-disc ml-5 text-gray-900">
-                {inputs.map((text, idx) => (
-                  <li key={idx}>{text}</li>
-                ))}
-              </ul>
+              <div className="font-semibold text-gray-800 mb-2">Itinerary inputs</div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <input
+                  className="border rounded p-2"
+                  placeholder="Destination"
+                  value={destination}
+                  onChange={(e) => setDestination(e.target.value)}
+                />
+                <input
+                  className="border rounded p-2"
+                  placeholder="Days"
+                  type="number"
+                  min={1}
+                  max={21}
+                  value={days}
+                  onChange={(e) => setDays(Number(e.target.value))}
+                />
+                <input
+                  className="border rounded p-2"
+                  placeholder="Preferences (comma-separated)"
+                  value={preferences}
+                  onChange={(e) => setPreferences(e.target.value)}
+                />
+              </div>
+              <button
+                className='mt-3 px-4 py-2 bg-green-600 text-white rounded disabled:opacity-50'
+                onClick={handleGenerate}
+                disabled={itLoading || !destination.trim()}
+              >
+                {itLoading ? 'Generating...' : 'Generate Itinerary'}
+              </button>
+              {itError && <p className='text-red-600 mt-2'>{itError}</p>}
             </div>
+            {itinerary && (
+              <div className="max-w-3xl mx-auto mt-6 p-4 border rounded-lg bg-white shadow-sm">
+                <div className="font-semibold text-gray-800 mb-2">Itinerary</div>
+                <p className="text-gray-700 mb-2">{itinerary.notes || 'Personalized itinerary'}</p>
+                <ul className="space-y-2">
+                  {itinerary.days.map((day, idx) => (
+                    <li key={idx} className="border rounded p-2">
+                      <p className="font-semibold">Day {idx + 1}</p>
+                      <p><strong>Activities:</strong> {day.activities.join(', ')}</p>
+                      <p><strong>Food:</strong> {day.food.join(', ')}</p>
+                      <p><strong>Sights:</strong> {day.sights.join(', ')}</p>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </>
         )}
         <div className={`flex items-center gap-3 bg-white rounded-full border border-gray-200  shadow-md px-4 py-3 ${messageSent ? 'fixed bottom-10 left-1/2 transform -translate-x-1/2' : ''}`}>
@@ -217,6 +261,9 @@ function Home() {
             )}
           </button>
         </div>
+        {!messageSent && intentError && (
+          <p className='text-red-600 mt-2'>{intentError}</p>
+        )}
 
         {/* Suggestion Keywords */}
         {!messageSent && (
@@ -245,6 +292,8 @@ function Home() {
             </button>
           </div>
         )}
+
+        
       </div>
     </div>
     {!messageSent && <PlanDestination />}
