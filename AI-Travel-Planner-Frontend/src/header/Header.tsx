@@ -11,7 +11,6 @@ function Header() {
       
       <nav className="flex items-center space-x-8">
         <a href="#/" className="text-gray-700 hover:text-gray-900">Home</a>
-        <a href="#/admin" className="text-gray-700 hover:text-gray-900">Admin</a>
       </nav>
       
       <div>
