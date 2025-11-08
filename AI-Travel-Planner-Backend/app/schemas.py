@@ -17,7 +17,7 @@ class IntentResponse(BaseModel):
 
 class ItineraryRequest(BaseModel):
     destination: str
-    days: int = Field(..., ge=1, le=21)
+    days: int = Field(..., ge=1, le=30)
     preferences: List[str] = []
 
 
@@ -47,8 +47,19 @@ class DestinationListResponse(BaseModel):
 
 class PlanRequest(BaseModel):
     text: str = Field(..., description="User message for planning")
+    # Optional preferred label from model classification: one of beach, mountains, city, food, culture
+    preferred_label: Optional[str] = None
+    # Conversation context
+    session_id: Optional[str] = Field(default=None, description="Conversation/session identifier")
+    destination: Optional[str] = Field(default=None, description="Chosen destination name")
+    days: Optional[int] = Field(default=None, ge=1, le=30, description="Planned travel days")
+    budget: Optional[str] = Field(default=None, description="Budget band, e.g., budget, mid, luxury")
 
 
 class PlanResponse(BaseModel):
     intent: str
     recommendations: List[str]
+    # Orchestration additions
+    session_id: Optional[str] = None
+    next_questions: List[str] = []
+    itinerary: Optional[ItineraryResponse] = None

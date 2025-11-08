@@ -1,0 +1,119 @@
+{
+  "Paris": {
+    "sights": [
+      "Eiffel Tower",
+      "Louvre Museum",
+      "Notre-Dame Cathedral",
+      "Montmartre & Sacré-Cœur",
+      "Musée d’Orsay",
+      "Seine River",
+      "Le Marais",
+      "Champs-Élysées & Arc de Triomphe",
+      "Latin Quarter",
+      "Versailles (day trip)"
+    ],
+    "activities": [
+      "Sunset Seine cruise",
+      "Cafe-hopping in Le Marais",
+      "Picnic at Champ de Mars",
+      "Museum day: Louvre & d’Orsay",
+      "Montmartre photo walk",
+      "Latin Quarter bookshop crawl",
+      "Versailles palace & gardens"
+    ],
+    "food": [
+      "Croissants at local boulangerie",
+      "Bistro lunch with steak-frites",
+      "Macarons & pastries",
+      "Fromagerie tasting",
+      "Wine bar & charcuterie",
+      "Crêpes stand dinner"
+    ]
+  },
+  "Tokyo": {
+    "sights": [
+      "Shibuya Crossing",
+      "Senso-ji Temple",
+      "Meiji Shrine",
+      "Tsukiji Outer Market",
+      "Akihabara",
+      "Ueno Park & Museums",
+      "Tokyo Skytree"
+    ],
+    "activities": [
+      "Sushi breakfast at Tsukiji",
+      "Harajuku fashion stroll",
+      "Tea ceremony",
+      "Arcade night in Akihabara",
+      "Onsen experience"
+    ],
+    "food": [
+      "Ramen shop",
+      "Yakitori alley",
+      "Tempura lunch",
+      "Okonomiyaki dinner",
+      "Taiyaki snack"
+    ]
+  },
+  "Bali": {
+    "sights": [
+      "Uluwatu Temple",
+      "Tegallalang Rice Terraces",
+      "Ubud Monkey Forest",
+      "Nusa Penida (day trip)",
+      "Tanah Lot"
+    ],
+    "activities": [
+      "Sunset at Uluwatu",
+      "Morning yoga in Ubud",
+      "Waterfall hike",
+      "Snorkeling at Nusa Penida",
+      "Beach day in Seminyak"
+    ],
+    "food": [
+      "Warung nasi campur",
+      "Fresh fruit bowls",
+      "Seafood grill",
+      "Babi guling",
+      "Satay dinner"
+    ]
+  },
+  "Maldives": {
+    "sights": [
+      "House reef",
+      "Sandbank",
+      "Local island tour"
+    ],
+    "activities": [
+      "Snorkeling safari",
+      "Sunset dolphin cruise",
+      "Kayaking & paddleboard",
+      "Spa afternoon"
+    ],
+    "food": [
+      "Fresh seafood dinner",
+      "Coconut curry",
+      "Beach BBQ"
+    ]
+  },
+  "Goa": {
+    "sights": [
+      "Baga Beach",
+      "Fort Aguada",
+      "Old Goa churches",
+      "Anjuna Flea Market"
+    ],
+    "activities": [
+      "Sunset at Chapora",
+      "Market shopping",
+      "Spice plantation tour",
+      "Water sports"
+    ],
+    "food": [
+      "Goan fish curry",
+      "Prawn balchao",
+      "Vindaloo",
+      "Bebinca dessert"
+    ]
+  }
+}

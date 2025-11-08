@@ -19,12 +19,14 @@ try:
     )
     from .agents.recommender import classify_intent
     from .agents.itinerary_builder import generate_itinerary
+    from .agents.manager import orchestrate
 except Exception:
     # Minimal fallbacks so the app can start; endpoints will error if used before deps are installed
     settings = None  # type: ignore
     IntentRequest = IntentResponse = ItineraryRequest = ItineraryResponse = DestinationItem = DestinationListResponse = PlanRequest = PlanResponse = Any  # type: ignore
     classify_intent = None  # type: ignore
     generate_itinerary = None  # type: ignore
+    orchestrate = None  # type: ignore
 
 
 app = FastAPI(title="AI Travel Planner Backend", version="0.1.0")
@@ -92,59 +94,40 @@ def api_list_destinations(
 
 @app.post("/api/plan", response_model=PlanResponse)
 def api_plan(req: PlanRequest):
-    # Lightweight multi-tag intent classification for fast, relevant suggestions
-    t = req.text.lower()
-
-    matched_tags: List[str] = []
-    if "beach" in t or any(k in t for k in ["sea", "sand", "island", "coast"]):
-        matched_tags.append("beach")
-    if any(k in t for k in ["hike", "trek", "alps", "mountain", "peak"]):
-        matched_tags.append("mountains")
-    if any(k in t for k in ["city", "cities", "museum", "nightlife", "shopping", "downtown", "urban", "metropolis", "metropolitan"]):
-        matched_tags.append("city")
-    if any(k in t for k in ["food", "cuisine", "restaurant", "street food", "dining"]):
-        matched_tags.append("food")
-    if any(k in t for k in ["culture", "cultural", "history", "historic", "art", "heritage", "festival", "tradition", "traditional"]):
-        matched_tags.append("culture")
-
-    # Choose primary label for UI messaging (first match or unknown)
-    label = matched_tags[0] if matched_tags else "unknown"
-
-    # Score destinations by number of matched tags (prefer items that fit multiple intents)
-    scored: List[tuple[str, int]] = []
-    for d in DESTINATIONS:
-        tags = [str(x).lower() for x in d.get("tags", [])]
-        score = sum(1 for mt in matched_tags if mt in tags) if matched_tags else 0
-        name = d.get("name")
-        if isinstance(name, str) and score > 0:
-            scored.append((name, score))
-
-    # If no multi-tag matches, fall back to single primary label filter
-    if not scored and label != "unknown":
+    if orchestrate is None:
+        # Fallback to very simple behavior if orchestrator not available
+        allowed_labels = {"beach", "mountains", "city", "food", "culture"}
+        matched_tags: List[str] = []
+        label = "unknown"
+        pl = getattr(req, "preferred_label", None)
+        if isinstance(pl, str):
+            pln = pl.strip().lower()
+            if pln in allowed_labels:
+                matched_tags = [pln]
+                label = pln
+        if not matched_tags:
+            t = req.text.lower()
+            if "beach" in t or any(k in t for k in ["sea", "sand", "island", "coast"]):
+                matched_tags.append("beach")
+            if any(k in t for k in ["hike", "trek", "alps", "mountain", "peak"]):
+                matched_tags.append("mountains")
+            if any(k in t for k in ["city", "cities", "museum", "nightlife", "shopping", "downtown", "urban", "metropolis", "metropolitan"]):
+                matched_tags.append("city")
+            if any(k in t for k in ["food", "cuisine", "restaurant", "street food", "dining"]):
+                matched_tags.append("food")
+            if any(k in t for k in ["culture", "cultural", "history", "historic", "art", "heritage", "festival", "tradition", "traditional"]):
+                matched_tags.append("culture")
+            label = matched_tags[0] if matched_tags else "unknown"
+        # Minimal recommendations
+        recommendations = []
         for d in DESTINATIONS:
             tags = [str(x).lower() for x in d.get("tags", [])]
-            if label in tags:
-                name = d.get("name")
-                if isinstance(name, str):
-                    scored.append((name, 1))
-
-    # Prefer known beach picks if beach is among matched tags
-    recommendations: List[str] = []
-    if "beach" in matched_tags:
-        preferred = ["Bali", "Maldives", "Goa"]
-        for p in preferred:
-            # Only add if it actually matched tags
-            for n, s in scored:
-                if n == p and p not in recommendations:
-                    recommendations.append(p)
-                    break
-
-    # Sort by score descending; maintain original catalog order for ties
-    scored.sort(key=lambda x: x[1], reverse=True)
-    for n, _ in scored:
-        if n not in recommendations:
-            recommendations.append(n)
-
-    recommendations = recommendations[:3]
-
-    return {"intent": label, "recommendations": recommendations or ["Bali"]}
+            name = d.get("name")
+            if isinstance(name, str) and (not matched_tags or any(mt in tags for mt in matched_tags)):
+                if name not in recommendations:
+                    recommendations.append(name)
+        recommendations = recommendations[:3] or ["Bali"]
+        return {"intent": label, "recommendations": recommendations}
+    # Use ManagerAgent
+    resp = orchestrate(req)
+    return resp

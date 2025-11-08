@@ -27,6 +27,12 @@ pip install -r requirements.txt
 HF_API_TOKEN=your_token_here
 RECOMMENDER_MODEL=facebook/bart-large-mnli
 ITINERARY_MODEL=distilgpt2
+
+# Enable POI provider (one of: generic, rapidapi_tripadvisor)
+POI_PROVIDER=rapidapi_tripadvisor
+POI_ENABLED=true
+POI_API_KEY=your_rapidapi_key
+RAPIDAPI_TRIPADVISOR_HOST=travel-advisor.p.rapidapi.com
 ```
 
 > If you plan to use local transformers pipelines, install the appropriate frameworks (e.g., `torch`).

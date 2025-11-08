@@ -19,6 +19,8 @@ function Home() {
   const [botMessage, setBotMessage] = useState<string | null>(null)
   const [recommendations, setRecommendations] = useState<string[]>([])
   const [selectedDest, setSelectedDest] = useState<string | null>(null)
+  const [sessionId, setSessionId] = useState<string | null>(null)
+  const [nextQuestions, setNextQuestions] = useState<string[]>([])
   
   // All 20 suggestions
   const allSuggestions = [
@@ -68,11 +70,20 @@ function Home() {
     setIsLoading(true)
     setIntentError(null)
     setItinerary(null)
+    // Show a pre-classification message to match the desired flow
+    setMessageSent(true)
+    setBotMessage("Sounds great! Let me check with the AI what kind of trip that is…")
     try {
-      const planRes: PlanResponse = await plan(inputValue.trim())
-      setMessageSent(true)
+      const text = inputValue.trim()
+      // Classify first using the backend model
+      const cls: IntentResponse = await classifyIntent({ text })
+      setIntentResult(cls)
+      const intentLabel = cls.label
+      // Plan recommendations guided by the classified label
+      const planRes: PlanResponse = await plan({ text, preferred_label: intentLabel })
       setRecommendations(planRes.recommendations)
-      const intentLabel = planRes.intent
+      setSessionId(planRes.session_id || null)
+      setNextQuestions(Array.isArray(planRes.next_questions) ? planRes.next_questions : [])
       const opts = planRes.recommendations
       const formatOptions = (arr: string[]) => {
         const items = arr.filter(Boolean).slice(0, 3)
@@ -81,17 +92,13 @@ function Home() {
         if (items.length === 2) return `${items[0]} or ${items[1]}`
         return `${items[0]}, ${items[1]}, or ${items[2]}`
       }
-      const msg = `Got it — you're looking for a ${intentLabel} destination! Here are a few great options: ${formatOptions(opts)}. Which one sounds best to you?`
+      const msg = `That sounds like a ${intentLabel} trip! Let me think of some destinations for you. Based on your preferences, here are the top destinations I recommend: ${formatOptions(opts)}. Which one sounds best to you?`
       setBotMessage(msg)
       // Seed itinerary inputs based on recommendations
       const first = opts[0] || 'Bali'
       setDestination(first)
       setPreferences((p) => p || intentLabel)
       setInputValue('')
-      // Kick off classification in background (optional scores card)
-      classifyIntent({ text: inputValue.trim() })
-        .then((res) => setIntentResult(res))
-        .catch(() => {})
     } catch (e: any) {
       setIntentError(e?.message || 'Failed to classify')
     } finally {
@@ -120,9 +127,34 @@ function Home() {
     }
   }
 
-  const handleChoose = (name: string) => {
+  const handleChoose = async (name: string) => {
     setSelectedDest(name)
     setDestination(name)
+    // If we have a session and intent, attempt orchestration to generate itinerary
+    if (sessionId && intentResult?.label) {
+      setItLoading(true)
+      setItError(null)
+      try {
+        const res = await plan({
+          text: inputValue || `Plan a ${intentResult.label} trip`,
+          preferred_label: intentResult.label,
+          session_id: sessionId,
+          destination: name,
+          days,
+        })
+        // If itinerary included, use it; otherwise update questions
+        if (res.itinerary) {
+          setItinerary(res.itinerary)
+          setNextQuestions([])
+        } else {
+          setNextQuestions(Array.isArray(res.next_questions) ? res.next_questions : [])
+        }
+      } catch (e: any) {
+        setItError(e?.message || 'Failed to orchestrate plan')
+      } finally {
+        setItLoading(false)
+      }
+    }
   }
 
   return (
@@ -149,6 +181,13 @@ function Home() {
                 </div>
                 {selectedDest && (
                   <div className="mt-3 text-green-700">Thank you for choosing {selectedDest}.</div>
+                )}
+                {nextQuestions.length > 0 && (
+                  <div className="mt-4 text-gray-700">
+                    {nextQuestions.map((q, i) => (
+                      <div key={i} className="mb-1">• {q}</div>
+                    ))}
+                  </div>
                 )}
               </div>
             )}
@@ -226,13 +265,13 @@ function Home() {
             )}
           </>
         )}
-        <div className={`flex items-center gap-3 bg-white rounded-full border border-gray-200  shadow-md px-4 py-3 ${messageSent ? 'fixed bottom-10 left-1/2 transform -translate-x-1/2' : ''}`}>
+        <div className={`flex items-center gap-3 bg-white rounded-full border border-gray-200 shadow-md px-4 py-3 ${messageSent ? 'fixed bottom-6 left-1/2 transform -translate-x-1/2 w-full max-w-3xl z-40' : ''}`}>
           {/* Left: plus icon button */}
          
 
           {/* Input */}
           <input
-            className='flex-1 outline-none text-gray-800 placeholder:text-gray-400 w-200'
+            className='flex-1 w-full outline-none text-gray-800 placeholder:text-gray-400'
             placeholder='Ask anything'
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
@@ -261,6 +300,10 @@ function Home() {
             )}
           </button>
         </div>
+        {messageSent && (
+          // Spacer to prevent content from being hidden behind the fixed chatbox
+          <div className='h-24' aria-hidden='true'></div>
+        )}
         {!messageSent && intentError && (
           <p className='text-red-600 mt-2'>{intentError}</p>
         )}
