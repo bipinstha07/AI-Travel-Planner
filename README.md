@@ -4,7 +4,6 @@ AI Travel Planner is a full-stack project combining a **React + TypeScript (Yarn
 
 ## 🚀 Setup
 
-### Frontend
 ```bash
 cd AI-Travel-Planner-Frontend
 yarn install
