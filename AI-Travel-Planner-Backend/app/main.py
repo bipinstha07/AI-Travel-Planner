@@ -16,17 +16,21 @@ try:
         DestinationListResponse,
         PlanRequest,
         PlanResponse,
+        ChatRequest,
+        ChatResponse,
     )
     from .agents.recommender import classify_intent
     from .agents.itinerary_builder import generate_itinerary
     from .agents.manager import orchestrate
+    from .agents.chat import _get_chat_generator
 except Exception:
     # Minimal fallbacks so the app can start; endpoints will error if used before deps are installed
     settings = None  # type: ignore
-    IntentRequest = IntentResponse = ItineraryRequest = ItineraryResponse = DestinationItem = DestinationListResponse = PlanRequest = PlanResponse = Any  # type: ignore
+    IntentRequest = IntentResponse = ItineraryRequest = ItineraryResponse = DestinationItem = DestinationListResponse = PlanRequest = PlanResponse = ChatRequest = ChatResponse = Any  # type: ignore
     classify_intent = None  # type: ignore
     generate_itinerary = None  # type: ignore
     orchestrate = None  # type: ignore
+    _get_chat_generator = None  # type: ignore
 
 
 app = FastAPI(title="AI Travel Planner Backend", version="0.1.0")
@@ -75,6 +79,18 @@ def api_generate_itinerary(req: ItineraryRequest):
     return itinerary
 
 
+@app.post("/api/chat", response_model=ChatResponse)
+def api_chat(req: ChatRequest):
+    if _get_chat_generator is None:
+        return {"reply": "Chat not available: dependencies not installed"}  # type: ignore
+    gen = _get_chat_generator()
+    reply = (gen(req.prompt) or "").strip()
+    # Ensure reply is never empty so the UI shows a helpful message
+    if not reply:
+        reply = "Chat is currently unavailable. Please try again shortly."
+    return {"reply": reply}
+
+
 @app.get("/api/recommendations/destinations", response_model=DestinationListResponse)
 def api_list_destinations(
     tag: str | None = Query(default=None, description="Filter by tag"),
@@ -94,40 +110,5 @@ def api_list_destinations(
 
 @app.post("/api/plan", response_model=PlanResponse)
 def api_plan(req: PlanRequest):
-    if orchestrate is None:
-        # Fallback to very simple behavior if orchestrator not available
-        allowed_labels = {"beach", "mountains", "city", "food", "culture"}
-        matched_tags: List[str] = []
-        label = "unknown"
-        pl = getattr(req, "preferred_label", None)
-        if isinstance(pl, str):
-            pln = pl.strip().lower()
-            if pln in allowed_labels:
-                matched_tags = [pln]
-                label = pln
-        if not matched_tags:
-            t = req.text.lower()
-            if "beach" in t or any(k in t for k in ["sea", "sand", "island", "coast"]):
-                matched_tags.append("beach")
-            if any(k in t for k in ["hike", "trek", "alps", "mountain", "peak"]):
-                matched_tags.append("mountains")
-            if any(k in t for k in ["city", "cities", "museum", "nightlife", "shopping", "downtown", "urban", "metropolis", "metropolitan"]):
-                matched_tags.append("city")
-            if any(k in t for k in ["food", "cuisine", "restaurant", "street food", "dining"]):
-                matched_tags.append("food")
-            if any(k in t for k in ["culture", "cultural", "history", "historic", "art", "heritage", "festival", "tradition", "traditional"]):
-                matched_tags.append("culture")
-            label = matched_tags[0] if matched_tags else "unknown"
-        # Minimal recommendations
-        recommendations = []
-        for d in DESTINATIONS:
-            tags = [str(x).lower() for x in d.get("tags", [])]
-            name = d.get("name")
-            if isinstance(name, str) and (not matched_tags or any(mt in tags for mt in matched_tags)):
-                if name not in recommendations:
-                    recommendations.append(name)
-        recommendations = recommendations[:3] or ["Bali"]
-        return {"intent": label, "recommendations": recommendations}
-    # Use ManagerAgent
-    resp = orchestrate(req)
-    return resp
+    # Strict no-fallback: disable orchestration and recommendations
+    return {"intent": "unknown", "recommendations": []}
