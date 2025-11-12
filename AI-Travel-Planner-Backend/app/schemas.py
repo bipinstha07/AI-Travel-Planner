@@ -45,6 +45,14 @@ class DestinationListResponse(BaseModel):
     items: List[DestinationItem]
 
 
+class ChatRequest(BaseModel):
+    prompt: str
+
+
+class ChatResponse(BaseModel):
+    reply: str
+
+
 class PlanRequest(BaseModel):
     text: str = Field(..., description="User message for planning")
     # Optional preferred label from model classification: one of beach, mountains, city, food, culture
