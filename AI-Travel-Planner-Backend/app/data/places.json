@@ -116,4 +116,44 @@
       "Bebinca dessert"
     ]
   }
+  ,
+  "Kyoto": {
+    "sights": [
+      "Fushimi Inari Taisha",
+      "Kinkaku-ji",
+      "Kiyomizu-dera",
+      "Arashiyama Bamboo Grove",
+      "Gion District",
+      "Nijo Castle",
+      "Philosopher's Path",
+      "Ryoan-ji",
+      "Kyoto Imperial Palace",
+      "Sanjusangendo",
+      "Nanzen-ji",
+      "Tofuku-ji",
+      "Heian Shrine",
+      "Nishiki Market"
+    ],
+    "activities": [
+      "Tea ceremony",
+      "Kimono rental in Gion",
+      "Cycle along Kamo River",
+      "Zen meditation at temple",
+      "Arashiyama boat ride",
+      "Night walk in Pontocho",
+      "Bamboo grove morning walk",
+      "Temple photo walk",
+      "Traditional craft workshop"
+    ],
+    "food": [
+      "Kaiseki dinner",
+      "Yudofu (tofu hot pot)",
+      "Matcha desserts",
+      "Obanzai (Kyoto home-style)",
+      "Nishiki Market street food",
+      "Saba sushi",
+      "Udon lunch",
+      "Izakaya night"
+    ]
+  }
 }

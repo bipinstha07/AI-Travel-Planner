@@ -1,4 +1,8 @@
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
+// Allow longer itinerary generation and make timeout configurable.
+const ITINERARY_TIMEOUT_MS = Number(
+  (import.meta.env as any).VITE_ITINERARY_TIMEOUT_MS ?? 60000
+);
 
 export type IntentRequest = {
   text: string;
@@ -44,7 +48,7 @@ export type ItineraryResponse = {
 
 export async function generateItinerary(req: ItineraryRequest): Promise<ItineraryResponse> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 20000);
+  const timeout = setTimeout(() => controller.abort(), ITINERARY_TIMEOUT_MS);
   try {
     const res = await fetch(`${API_BASE}/api/itinerary/generate`, {
       method: "POST",
@@ -60,7 +64,8 @@ export async function generateItinerary(req: ItineraryRequest): Promise<Itinerar
     return await res.json();
   } catch (e: any) {
     if (e?.name === 'AbortError') {
-      throw new Error('Itinerary request timed out after 20s. Please try again.');
+      const secs = Math.round(ITINERARY_TIMEOUT_MS / 1000);
+      throw new Error(`Itinerary request timed out after ${secs}s. Please try again.`);
     }
     throw e;
   } finally {
@@ -106,6 +111,25 @@ export type PlanRequest = {
   days?: number;
   budget?: string;
 };
+
+// Chat API
+export type ChatRequest = {
+  prompt: string;
+};
+
+export type ChatResponse = {
+  reply: string;
+};
+
+export async function chat(req: ChatRequest): Promise<ChatResponse> {
+  const res = await fetch(`${API_BASE}/api/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt: req.prompt }),
+  });
+  if (!res.ok) throw new Error(`Chat failed: ${res.status}`);
+  return res.json();
+}
 
 export async function plan(req: PlanRequest): Promise<PlanResponse> {
   const controller = new AbortController();
