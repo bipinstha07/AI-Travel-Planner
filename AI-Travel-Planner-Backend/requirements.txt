@@ -1,9 +1,0 @@
-fastapi
-uvicorn[standard]
-pydantic
-transformers==4.38.2
-torch
-sentencepiece
-huggingface-hub
-python-dotenv
-groq

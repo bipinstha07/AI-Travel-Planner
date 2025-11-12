@@ -1,12 +1,5 @@
-import type { DestinationItem } from '../../api/client'
-
-type Props = {
-  onSelect?: (destination: string) => void
-  items?: DestinationItem[]
-}
-
-function PlanDestination({ onSelect, items }: Props) {
-  const fallback = [
+function PlanDestination() {
+  const destinations = [
     {
       city: "Paris, France",
       title: "Explore the City of Lights",
@@ -33,23 +26,13 @@ function PlanDestination({ onSelect, items }: Props) {
     }
   ]
 
-  const destinations = (items && items.length > 0)
-    ? items.map((d) => ({
-        city: `${d.name}${d.country ? `, ${d.country}` : ''}`,
-        title: d.description || d.tags?.join(', ') || 'Popular destination',
-        attractions: d.tags?.slice(0, 3).join(', ') || 'Highlights',
-        image: `https://source.unsplash.com/featured/?${encodeURIComponent(d.name)}`,
-      }))
-    : fallback
-
   return (
-    <div className="w-full overflow-x-auto px-6 py-8">
+    <div className="w-full  overflow-x-auto px-6 py-8">
       <div className="flex gap-6 max-w-7xl mx-auto">
         {destinations.map((destination, index) => (
           <div
             key={index}
             className="group relative shrink-0 w-72 h-96 rounded-3xl overflow-hidden shadow-lg transition-transform duration-300 ease-in-out hover:scale-105 cursor-pointer"
-            onClick={() => onSelect?.(destination.city)}
           >
             {/* Background Image */}
             <div
