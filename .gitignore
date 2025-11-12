@@ -1,0 +1,65 @@
+# --- Python / FastAPI Backend ---
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.db
+*.sqlite3
+.env
+.env.*
+.venv/
+venv/
+instance/
+*.log
+.DS_Store
+
+# Byte-compiled / cache files
+*.egg-info/
+.eggs/
+*.egg
+
+# Virtual environments
+.env/
+.venv/
+env/
+ENV/
+build/
+dist/
+
+# IDE / Editor settings
+.idea/
+.vscode/
+*.swp
+
+# --- Node / React Frontend ---
+node_modules/
+dist/
+build/
+yarn-error.log
+npm-debug.log*
+package-lock.json
+.pnp/
+.pnp.js
+
+# Environment and local config files
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# --- OS Files ---
+Thumbs.db
+.DS_Store
+
+# --- Custom folders ---
+AI-Travel-Planner-Backend/.env
+AI-Travel-Planner-Backend/.env.*
+Py/.env
+Py/.env.*
