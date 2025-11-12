@@ -75,6 +75,9 @@ def api_generate_itinerary(req: ItineraryRequest):
     return itinerary
 
 
+
+
+
 @app.get("/api/recommendations/destinations", response_model=DestinationListResponse)
 def api_list_destinations(
     tag: str | None = Query(default=None, description="Filter by tag"),
