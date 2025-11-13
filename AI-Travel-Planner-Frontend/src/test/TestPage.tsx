@@ -266,12 +266,12 @@ export default function MapView() {
 
     const expandedInnerStyle = isExpanded
       ? {
-          padding: "24px",
+          padding: "0 24px 24px 24px",
           transform: "translateY(0)",
           opacity: 1,
           visibility: "visible" as const,
           transition:
-            "padding 0.5s ease, transform 0.5s ease, opacity 0.3s ease 0.1s, visibility 0s linear 0s",
+            "transform 0.5s ease, opacity 0.3s ease 0.1s, visibility 0s linear 0s",
           pointerEvents: "auto" as const,
         }
       : {
@@ -280,7 +280,7 @@ export default function MapView() {
           opacity: 0,
           visibility: "hidden" as const,
           transition:
-            "padding 0.5s ease, transform 0.5s ease, opacity 0.25s ease 0.5s, visibility 0s linear 0.5s",
+            "transform 0.5s ease, opacity 0.25s ease 0.5s, visibility 0s linear 0.5s",
           pointerEvents: "none" as const,
         };
 
@@ -671,12 +671,12 @@ export default function MapView() {
 
     const expandedInnerStyle = isExpanded
       ? {
-          padding: "16px",
+          padding: "0 16px 16px 16px",
           transform: "translateY(0)",
           opacity: 1,
           visibility: "visible" as const,
           transition:
-            "padding 0.5s ease, transform 0.5s ease, opacity 0.3s ease 0.1s, visibility 0s linear 0s",
+            "transform 0.5s ease, opacity 0.3s ease 0.1s, visibility 0s linear 0s",
           pointerEvents: "auto" as const,
         }
       : {
@@ -685,7 +685,7 @@ export default function MapView() {
           opacity: 0,
           visibility: "hidden" as const,
           transition:
-            "padding 0.5s ease, transform 0.5s ease, opacity 0.25s ease 0.5s, visibility 0s linear 0.5s",
+            "transform 0.5s ease, opacity 0.25s ease 0.5s, visibility 0s linear 0.5s",
           pointerEvents: "none" as const,
         };
 
