@@ -252,9 +252,7 @@ export default function MapView() {
     });
 
     const isExpanded = !!expandedBest[idx];
-    const headerGridTemplate = isExpanded
-      ? "auto 1fr auto auto"
-      : "auto minmax(180px, 1.2fr) 140px 180px auto";
+    const headerGridTemplate = "auto minmax(180px, 1.2fr) 140px 180px auto";
 
     const expandedContainerStyle = {
       maxHeight: isExpanded ? "1600px" : "0px",
@@ -322,28 +320,18 @@ export default function MapView() {
               <div
                 style={{
                   color: "#202124",
-                  fontSize: isExpanded ? "18px" : "16px",
+                  fontSize: "16px",
                   fontWeight: 500,
-                  textTransform: isExpanded ? "none" : "none",
                 }}
               >
                 {isExpanded ? `Departure · ${departureDateLabel}` : timeLabel}
               </div>
               {primaryAirline && (
                 <div
-                  style={
-                    isExpanded
-                      ? {
-                          color: "#5f6368",
-                          fontSize: "13px",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.4px",
-                        }
-                      : {
-                          color: "#5f6368",
-                          fontSize: "13px",
-                        }
-                  }
+                  style={{
+                    color: "#5f6368",
+                    fontSize: "13px",
+                  }}
                 >
                   {primaryAirline}
                 </div>
@@ -352,69 +340,28 @@ export default function MapView() {
           </div>
           {/* Duration */}
           <div style={{ display: "grid", gap: "4px" }}>
-            {isExpanded ? (
-              googleFlightsUrl ? (
-                <a
-                  href={googleFlightsUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                  style={{
-                    padding: "10px 20px",
-                    borderRadius: "999px",
-                    border: "1px solid #1a73e8",
-                    background: "#fff",
-                    color: "#1a73e8",
-                    cursor: "pointer",
-                    fontWeight: 500,
-                    fontSize: "14px",
-                    textDecoration: "none",
-                    justifySelf: "start",
-                    boxShadow: "0 1px 2px rgba(60, 64, 67, 0.2)",
-                  }}
-                >
-                  Select flight
-                </a>
-              ) : (
-                <span style={{ color: "#5f6368", fontSize: "12px" }}>Select flight unavailable</span>
-              )
-            ) : (
-              <>
-                <div style={{ color: "#202124", fontSize: "15px", fontWeight: 500 }}>{formatDuration(option.total_duration)}</div>
-                <div style={{ color: "#5f6368", fontSize: "12px" }}>{routeLabel}</div>
-              </>
-            )}
+            <div style={{ color: "#202124", fontSize: "15px", fontWeight: 500 }}>{formatDuration(option.total_duration)}</div>
+            <div style={{ color: "#5f6368", fontSize: "12px" }}>{routeLabel}</div>
           </div>
           {/* Stops */}
-          {isExpanded ? (
-            <div style={{ textAlign: "right" }}>
-              <div style={{ color: "#188038", fontSize: "18px", fontWeight: 500 }}>
-                {option.price != null ? `$${option.price}` : "Price unavailable"}
-              </div>
-              <div style={{ color: "#5f6368", fontSize: "12px" }}>round trip</div>
+          <div style={{ display: "grid", gap: "4px" }}>
+            <div style={{ color: hasOvernightLayover ? "#d93025" : "#202124", fontSize: "15px", fontWeight: 500 }}>
+              {stopsLabel}
+              {hasOvernightLayover && <span style={{ marginLeft: "4px" }}>⚠</span>}
             </div>
-          ) : (
-            <div style={{ display: "grid", gap: "4px" }}>
-              <div style={{ color: hasOvernightLayover ? "#d93025" : "#202124", fontSize: "15px", fontWeight: 500 }}>
-                {stopsLabel}
-                {hasOvernightLayover && <span style={{ marginLeft: "4px" }}>⚠</span>}
+            {stopsCount > 0 && primaryLayover && (
+              <div style={{ color: "#5f6368", fontSize: "12px" }}>
+                {formatDuration(primaryLayover.duration)} · {primaryLayover.name}
               </div>
-              {stopsCount > 0 && primaryLayover && (
-                <div style={{ color: "#5f6368", fontSize: "12px" }}>
-                  {formatDuration(primaryLayover.duration)} · {primaryLayover.name}
-                </div>
-              )}
+            )}
+          </div>
+          {/* Price */}
+          <div style={{ textAlign: "right" }}>
+            <div style={{ color: "#188038", fontSize: "16px", fontWeight: 500 }}>
+              {option.price != null ? `$${option.price}` : "Price unavailable"}
             </div>
-          )}
-          {/* Price (collapsed view only) */}
-          {!isExpanded && (
-            <div style={{ textAlign: "right" }}>
-              <div style={{ color: "#188038", fontSize: "16px", fontWeight: 500 }}>
-                {option.price != null ? `$${option.price}` : "Price unavailable"}
-              </div>
-              <div style={{ color: "#5f6368", fontSize: "12px" }}>round trip</div>
-            </div>
-          )}
+            <div style={{ color: "#5f6368", fontSize: "12px" }}>round trip</div>
+          </div>
           {/* Chevron */}
           <div
             style={{
@@ -555,19 +502,30 @@ export default function MapView() {
                       >
                         {legroomExt && (
                           <div style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
-                            <span style={{ fontSize: "16px", lineHeight: "20px" }}>🪑</span>
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0, marginTop: "2px" }}>
+                              <rect x="2" y="4" width="12" height="10" rx="1" stroke="currentColor" strokeWidth="1.2" fill="none"/>
+                              <line x1="4" y1="7" x2="12" y2="7" stroke="currentColor" strokeWidth="1.2"/>
+                              <line x1="4" y1="10" x2="12" y2="10" stroke="currentColor" strokeWidth="1.2"/>
+                            </svg>
                             <span>{legroomExt}</span>
                           </div>
                         )}
                         {powerExt && (
                           <div style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
-                            <span style={{ fontSize: "16px", lineHeight: "20px" }}>🔌</span>
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0, marginTop: "2px" }}>
+                              <rect x="6" y="2" width="4" height="6" rx="0.5" stroke="currentColor" strokeWidth="1.2" fill="none"/>
+                              <line x1="8" y1="8" x2="8" y2="12" stroke="currentColor" strokeWidth="1.2"/>
+                              <line x1="5" y1="10" x2="11" y2="10" stroke="currentColor" strokeWidth="1.2"/>
+                            </svg>
                             <span>{powerExt}</span>
                           </div>
                         )}
                         {entertainmentExt && (
                           <div style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
-                            <span style={{ fontSize: "16px", lineHeight: "20px" }}>▶️</span>
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0, marginTop: "2px" }}>
+                              <rect x="2" y="2" width="12" height="12" rx="1" stroke="currentColor" strokeWidth="1.2" fill="none"/>
+                              <path d="M6 4 L6 12 L12 8 Z" fill="currentColor"/>
+                            </svg>
                             <span>{entertainmentExt}</span>
                           </div>
                         )}
@@ -580,44 +538,50 @@ export default function MapView() {
                           display: "grid",
                           gridTemplateColumns: "40px 1fr 240px",
                           gap: "24px",
-                          paddingTop: "8px",
-                          paddingBottom: "8px",
+                          paddingTop: "16px",
+                          paddingBottom: "16px",
                           position: "relative",
                         }}
                       >
-                        <div
-                          style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            alignItems: "center",
-                            position: "relative",
-                          }}
-                        >
+                        <div />
+                        <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          {/* Top horizontal line - aligns with flight details column */}
                           <div
                             style={{
-                              borderLeft: "2px dotted #dadce0",
-                              width: "0px",
-                              height: "100%",
-                              minHeight: "40px",
+                              position: "absolute",
+                              top: 0,
+                              left: 0,
+                              right: 0,
+                              borderTop: "1px solid #e8eaed",
                             }}
                           />
-                        </div>
-                        <div style={{ color: "#202124", fontSize: "13px", paddingTop: "8px" }}>
-                          {formatDuration(layover.duration)} layover · {layover.name} ({layover.id})
-                          {layover.overnight && (
-                            <span
-                              style={{
-                                color: "#d93025",
-                                marginLeft: "6px",
-                                fontWeight: 500,
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "4px",
-                              }}
-                            >
-                              ⚠ Overnight layover
-                            </span>
-                          )}
+                          {/* Bottom horizontal line - aligns with flight details column */}
+                          <div
+                            style={{
+                              position: "absolute",
+                              bottom: 0,
+                              left: 0,
+                              right: 0,
+                              borderBottom: "1px solid #e8eaed",
+                            }}
+                          />
+                          <div style={{ color: "#202124", fontSize: "13px", textAlign: "center", width: "100%", padding: "8px 0", position: "relative", zIndex: 1 }}>
+                            {formatDuration(layover.duration)} layover · {layover.name} ({layover.id})
+                            {layover.overnight && (
+                              <span
+                                style={{
+                                  color: "#d93025",
+                                  marginLeft: "6px",
+                                  fontWeight: 500,
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "4px",
+                                }}
+                              >
+                                ⚠ Overnight layover
+                              </span>
+                            )}
+                          </div>
                         </div>
                         <div />
                       </div>
@@ -652,9 +616,7 @@ export default function MapView() {
       : null;
 
     const isExpanded = !!expandedSummary[flight.rank];
-    const headerGridTemplate = isExpanded
-      ? "auto 1fr auto auto"
-      : "auto 1fr auto auto auto";
+    const headerGridTemplate = "auto 1fr auto auto auto";
     const departureDateLabel = new Date(flightForm.outbound_date).toLocaleDateString([], {
       weekday: "short",
       month: "short",
@@ -727,113 +689,45 @@ export default function MapView() {
             <div
               style={{
                 color: "#202124",
-                fontSize: isExpanded ? "16px" : "14px",
-                fontWeight: isExpanded ? 500 : 400,
+                fontSize: "14px",
+                fontWeight: 400,
               }}
             >
-              {isExpanded ? `Departure · ${departureDateLabel}` : flight.route}
+              {flight.route}
             </div>
-            {isExpanded ? (
-              airlineNames && (
-                <div
-                  style={{
-                    color: "#5f6368",
-                    fontSize: "12px",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.4px",
-                  }}
-                >
-                  {airlineNames}
-                </div>
-              )
-            ) : (
-              <div style={{ color: "#5f6368", fontSize: "13px" }}>{routeLabel}</div>
-            )}
+            <div style={{ color: "#5f6368", fontSize: "13px" }}>{routeLabel}</div>
           </div>
-          {/* Duration / Select flight */}
+          {/* Duration */}
           <div style={{ display: "grid", gap: "4px" }}>
-            {isExpanded ? (
-              googleFlightsUrl ? (
-                <a
-                  href={googleFlightsUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                  style={{
-                    padding: "8px 18px",
-                    borderRadius: "999px",
-                    border: "1px solid #1a73e8",
-                    background: "#fff",
-                    color: "#1a73e8",
-                    cursor: "pointer",
-                    fontWeight: 500,
-                    fontSize: "13px",
-                    textDecoration: "none",
-                    justifySelf: "start",
-                    boxShadow: "0 1px 2px rgba(60, 64, 67, 0.2)",
-                  }}
-                >
-                  Select flight
-                </a>
-              ) : (
-                <span style={{ color: "#5f6368", fontSize: "12px" }}>Select flight unavailable</span>
-              )
-            ) : (
-              <div style={{ color: "#5f6368", fontSize: "14px" }}>
-                {formatDuration(flight.total_duration_min)}
-              </div>
-            )}
+            <div style={{ color: "#5f6368", fontSize: "14px" }}>
+              {formatDuration(flight.total_duration_min)}
+            </div>
           </div>
-          {/* Stops or price */}
-          {isExpanded ? (
+          {/* Stops */}
+          <div style={{ color: "#5f6368", fontSize: "14px" }}>
+            {stopsLabel}
+            {layoverSummary && `, ${layoverSummary}`}
+          </div>
+          {/* Price */}
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", justifySelf: "flex-end" }}>
             <div style={{ textAlign: "right" }}>
-              <div style={{ color: "#202124", fontSize: "16px", fontWeight: 500 }}>
+              <div style={{ color: "#202124", fontSize: "14px", fontWeight: 500 }}>
                 {flight.price}
               </div>
               <div style={{ color: "#5f6368", fontSize: "12px" }}>{flight.type}</div>
             </div>
-          ) : (
-            <div style={{ color: "#5f6368", fontSize: "14px" }}>
-              {stopsLabel}
-              {layoverSummary && `, ${layoverSummary}`}
-            </div>
-          )}
-          {/* Price (collapsed view) */}
-          {!isExpanded && (
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", justifySelf: "flex-end" }}>
-              <div style={{ textAlign: "right" }}>
-                <div style={{ color: "#202124", fontSize: "14px", fontWeight: 500 }}>
-                  {flight.price}
-                </div>
-                <div style={{ color: "#5f6368", fontSize: "12px" }}>{flight.type}</div>
-              </div>
-              <div
-                style={{
-                  transform: expandedSummary[flight.rank] ? "rotate(180deg)" : "rotate(0deg)",
-                  transition: "transform 0.2s",
-                  color: "#5f6368",
-                  fontSize: "20px",
-                  lineHeight: 1,
-                }}
-              >
-                ▼
-              </div>
-            </div>
-          )}
-          {isExpanded && (
             <div
               style={{
-                transform: "rotate(180deg)",
+                transform: expandedSummary[flight.rank] ? "rotate(180deg)" : "rotate(0deg)",
                 transition: "transform 0.2s",
                 color: "#5f6368",
                 fontSize: "20px",
                 lineHeight: 1,
-                justifySelf: "flex-end",
               }}
             >
               ▼
             </div>
-          )}
+          </div>
         </div>
 
         <div style={expandedContainerStyle} aria-hidden={!expandedSummary[flight.rank]}>
