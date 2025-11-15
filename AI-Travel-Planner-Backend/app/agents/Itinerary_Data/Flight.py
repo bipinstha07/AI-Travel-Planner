@@ -1,6 +1,8 @@
 # Flight.py
 from serpapi import GoogleSearch
 from dotenv import load_dotenv
+from app.agents.Itinerary_Data.Airport_helper import resolve_airport_code
+
 import os
 
 load_dotenv()
@@ -18,6 +20,17 @@ def get_flights(
     Fetches flight options between two airports using SerpAPI Google Flights.
     Returns the complete SerpAPI response + a summarized section for convenience.
     """
+
+    
+    
+    dep_result = resolve_airport_code(departure_id)
+    arr_result = resolve_airport_code(arrival_id)
+
+    departure_id = dep_result["airport_code"]
+    arrival_id = arr_result["airport_code"]
+
+    print(departure_id, arrival_id)
+    print(dep_result, arr_result)
 
     params = {
         "engine": "google_flights",
