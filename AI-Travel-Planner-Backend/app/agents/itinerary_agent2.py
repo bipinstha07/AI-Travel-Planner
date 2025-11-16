@@ -11,6 +11,10 @@ maps = Maps()
 
 # --- Import hotel data helper ---
 from app.agents.Itinerary_Data.Hotels import get_hotels
+
+# --- Import flight data helper ---
+from app.agents.Itinerary_Data.Flight import get_flights
+
 # --- Load environment variables ---
 load_dotenv()
 HF_TOKEN = os.getenv("HF_TOKEN")
@@ -68,7 +72,61 @@ class ItineraryAgent2:
                 if isinstance(hotels, list) else "No hotel data available."
             )
 
-            # --- Step 3: Create structured prompt for AI
+            # --- Step 3: Fetch flight data
+            print("🛫 Fetching flight data...")
+            print(departure_city, destination, formatted_start, formatted_end)
+            print("--------------------------------")
+            flights = get_flights(
+                departure_city,
+                destination,
+                start.strftime("%Y-%m-%d"),   # correct format for API
+                end.strftime("%Y-%m-%d")      # correct format
+                )
+
+            if isinstance(flights, str):
+                try:
+                    flights = json.loads(flights)
+                   
+                except:
+                    print("❌ Error fetching flights: {e}")
+                    flights = []
+
+
+            # ================================
+            # ✨ GET ONLY THE FIRST FLIGHT
+            # ================================
+            first_flight = None
+
+            try:
+                summary_flights = flights.get("summary", {}).get("flights", [])
+
+                if summary_flights:
+                    f = summary_flights[0]   # 👉 ONLY FIRST FLIGHT
+
+                    departure_airport = f["legs"][0]["departure"]
+                    arrival_airport = f["legs"][-1]["arrival"]
+
+                    duration_min = f.get("total_duration_min")
+                    price = f.get("price")
+
+                    airlines = list({leg["airline"] for leg in f["legs"]})
+
+                    first_flight = {
+                        "departure_airport": departure_airport,
+                        "arrival_airport": arrival_airport,
+                        "duration_min": duration_min,
+                        "cheapest_price": price,
+                        "airlines": airlines
+                    }
+
+            except Exception as e:
+                print("⚠️ Error extracting first flight:", e)
+
+            print("🎯 First flight extracted:")
+            print(first_flight)
+
+
+            # --- Step 4: Create structured prompt for AI
             prompt = f"""
 You are an AI travel planner.
 
@@ -80,6 +138,10 @@ Dates: {formatted_start} to {formatted_end}
 
 Top hotel options:
 {hotel_context}
+
+This is the cheapest flight details:
+First flight details:
+{first_flight}
 
 ⚠️ STRICT FORMAT INSTRUCTIONS:
 Each day MUST begin with a markdown header in this format:
@@ -146,27 +208,15 @@ And at last give me a summary of the itinerary With the following information:
                         "link": h.get("link"),
                         "images": h.get("images", [])[:3]  # Limit 3 images per hotel
                     }
-                    for h in (hotels if isinstance(hotels, list) else [])
+                    for h in (hotels[:4] if isinstance(hotels, list) else [])
                 ],
                 "days": days_output,
-                "location": location
+                "location": location,
+                "flights": flights
             }
 
         except Exception as e:
             return {"error": str(e)}
 
 
-# ======================================================
-# 🧪 Example Run
-# ======================================================
-if __name__ == "__main__":
-    agent = ItineraryAgent2()
-    result = agent.generate_itinerary(
-        destination="Paris, France",
-        start_date="2025-12-10",
-        num_days=5,
-        budget="Mid-range",
-        departure_city="Dallas",
-        trip_type="Adventure"
-    )
-    print(json.dumps(result, indent=2))
+

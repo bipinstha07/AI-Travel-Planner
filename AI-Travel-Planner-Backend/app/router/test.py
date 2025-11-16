@@ -1,11 +1,18 @@
 from fastapi import APIRouter
 from app.agents.Itinerary_Data.Flight import get_flights
+from app.agents.Itinerary_Data.Airport_helper import resolve_airport_code
 from fastapi import Request
 import os
 
 router = APIRouter()
 
 
+@router.post("/airports")
+async def get_airports(request: Request):
+    data = await request.json()
+    search = data.get("search")
+    result = resolve_airport_code(search)
+    return result
 
 @router.post("/flight")
 async def get_flight(request: Request):

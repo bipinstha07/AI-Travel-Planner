@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Request
 from app.agents.chat_agent import ChatAgent
-from app.agents.itinerary_agent import ItineraryAgent
 from app.agents.state import ConversationState
 from app.agents.itinerary_agent2 import ItineraryAgent2
 
@@ -8,7 +7,6 @@ router = APIRouter()
 
 # Initialize global agents and state
 chat_agent = ChatAgent()
-itinerary_agent = ItineraryAgent()
 itinerary_agent2 = ItineraryAgent2()
 state = ConversationState()
 
