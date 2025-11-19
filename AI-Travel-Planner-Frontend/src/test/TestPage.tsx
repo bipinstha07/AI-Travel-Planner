@@ -1,5 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { FormEvent } from "react";
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import * as L from "leaflet";
+
+// Fix for default marker icons in Leaflet with React
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
+  iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
+  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+});
 
 interface FlightSearchPayload {
   departure_id: string;
@@ -33,6 +44,25 @@ interface FlightOption {
   airline_logo?: string;
 }
 
+interface Coordinates {
+  departure_place?: {
+    lat: number;
+    lon: number;
+  };
+  departure_airport?: {
+    lat: number;
+    lon: number;
+  };
+  arrival_place?: {
+    lat: number;
+    lon: number;
+  };
+  arrival_airport?: {
+    lat: number;
+    lon: number;
+  };
+}
+
 interface FlightApiResponse {
   // previous summary shape
   route?: string;
@@ -54,6 +84,7 @@ interface FlightApiResponse {
   search_metadata?: {
     google_flights_url?: string;
   };
+  coordinates?: Coordinates;
 }
 
 const formatDuration = (minutes: number) => {
@@ -144,6 +175,15 @@ const getDayOffsetSuffix = (start: AirportRef, end: AirportRef) => {
   return diffDays > 0 ? `+${diffDays}` : "";
 };
 
+// Component to update map view when coordinates change
+function ChangeView({ center, zoom }: { center: [number, number]; zoom: number }) {
+  const map = useMap();
+  useEffect(() => {
+    map.setView(center, zoom);
+  }, [map, center, zoom]);
+  return null;
+}
+
 export default function MapView() {
   const [flightForm, setFlightForm] = useState<FlightSearchPayload>({
     departure_id: "KTM",
@@ -215,6 +255,31 @@ export default function MapView() {
 
   const googleFlightsUrl = flightResponse?.search_metadata?.google_flights_url;
 
+  const getFlightUrl = (option: BestFlightOption | FlightOption) => {
+    const baseUrl = googleFlightsUrl || '';
+    if (!baseUrl) return null;
+    
+    // If it's a BestFlightOption with departure_token, replace tfu parameter to make it flight-specific
+    if ('departure_token' in option && option.departure_token) {
+      try {
+        const url = new URL(baseUrl);
+        // Replace or set the tfu parameter with the departure_token
+        url.searchParams.set('tfu', option.departure_token);
+        return url.toString();
+      } catch (e) {
+        // If URL parsing fails, try string replacement
+        if (baseUrl.includes('tfu=')) {
+          return baseUrl.replace(/tfu=[^&]*/, `tfu=${encodeURIComponent(option.departure_token)}`);
+        } else {
+          return `${baseUrl}&tfu=${encodeURIComponent(option.departure_token)}`;
+        }
+      }
+    }
+    
+    // For FlightOption or if no token, return base URL
+    return baseUrl;
+  };
+
   const toggleExpandedBest = (idx: number) => {
     setExpandedBest((prev) => ({ ...prev, [idx]: !prev[idx] }));
   };
@@ -252,7 +317,7 @@ export default function MapView() {
     });
 
     const isExpanded = !!expandedBest[idx];
-    const headerGridTemplate = "auto minmax(180px, 1.2fr) 140px 180px auto";
+    const headerGridTemplate = "auto minmax(180px, 1.2fr) 140px 180px auto auto";
 
     const expandedContainerStyle = {
       maxHeight: isExpanded ? "1600px" : "0px",
@@ -339,7 +404,7 @@ export default function MapView() {
             </div>
           </div>
           {/* Duration */}
-          <div style={{ display: "grid", gap: "4px" }}>
+          <div style={{ display: "grid", gap: "4px", textAlign: "center", justifySelf: "center" }}>
             <div style={{ color: "#202124", fontSize: "15px", fontWeight: 500 }}>{formatDuration(option.total_duration)}</div>
             <div style={{ color: "#5f6368", fontSize: "12px" }}>{routeLabel}</div>
           </div>
@@ -362,6 +427,38 @@ export default function MapView() {
             </div>
             <div style={{ color: "#5f6368", fontSize: "12px" }}>round trip</div>
           </div>
+          {/* Select Flight Button */}
+          {getFlightUrl(option) && (
+            <div style={{ display: "flex", alignItems: "center", justifySelf: "end" }}>
+              <a
+                href={getFlightUrl(option) || '#'}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: "4px",
+                  border: "1px solid #1a73e8",
+                  background: "#fff",
+                  color: "#1a73e8",
+                  cursor: "pointer",
+                  fontWeight: 500,
+                  fontSize: "13px",
+                  textDecoration: "none",
+                  whiteSpace: "nowrap",
+                  transition: "background-color 0.2s",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "#f8f9fa";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "#fff";
+                }}
+              >
+                Select flight
+              </a>
+            </div>
+          )}
           {/* Chevron */}
           <div
             style={{
@@ -603,9 +700,6 @@ export default function MapView() {
     const stopsCount = Math.max(flight.legs.length - 1, 0);
     const stopsLabel =
       stopsCount === 0 ? "Nonstop" : `${stopsCount} stop${stopsCount > 1 ? "s" : ""}`;
-    const airlineNames = Array.from(new Set(flight.legs.map((leg) => leg.airline))).join(
-      ", "
-    );
 
     const routeLabel = `${firstLeg.departure.split(" ")[0]}-${lastLeg.arrival.split(" ")[0]}`;
     const layoverSummary = flight.layovers && flight.layovers.length > 0 
@@ -616,12 +710,7 @@ export default function MapView() {
       : null;
 
     const isExpanded = !!expandedSummary[flight.rank];
-    const headerGridTemplate = "auto 1fr auto auto auto";
-    const departureDateLabel = new Date(flightForm.outbound_date).toLocaleDateString([], {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-    });
+    const headerGridTemplate = "auto 1fr auto auto auto auto";
 
     const expandedContainerStyle = {
       maxHeight: isExpanded ? "1200px" : "0px",
@@ -698,7 +787,7 @@ export default function MapView() {
             <div style={{ color: "#5f6368", fontSize: "13px" }}>{routeLabel}</div>
           </div>
           {/* Duration */}
-          <div style={{ display: "grid", gap: "4px" }}>
+          <div style={{ display: "grid", gap: "4px", textAlign: "center", justifySelf: "center" }}>
             <div style={{ color: "#5f6368", fontSize: "14px" }}>
               {formatDuration(flight.total_duration_min)}
             </div>
@@ -709,24 +798,57 @@ export default function MapView() {
             {layoverSummary && `, ${layoverSummary}`}
           </div>
           {/* Price */}
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", justifySelf: "flex-end" }}>
-            <div style={{ textAlign: "right" }}>
-              <div style={{ color: "#202124", fontSize: "14px", fontWeight: 500 }}>
-                {flight.price}
-              </div>
-              <div style={{ color: "#5f6368", fontSize: "12px" }}>{flight.type}</div>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ color: "#202124", fontSize: "14px", fontWeight: 500 }}>
+              {flight.price}
             </div>
-            <div
-              style={{
-                transform: expandedSummary[flight.rank] ? "rotate(180deg)" : "rotate(0deg)",
-                transition: "transform 0.2s",
-                color: "#5f6368",
-                fontSize: "20px",
-                lineHeight: 1,
-              }}
-            >
-              ▼
+            <div style={{ color: "#5f6368", fontSize: "12px" }}>{flight.type}</div>
+          </div>
+          {/* Select Flight Button */}
+          {getFlightUrl(flight) && (
+            <div style={{ display: "flex", alignItems: "center", justifySelf: "end" }}>
+              <a
+                href={getFlightUrl(flight) || '#'}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: "4px",
+                  border: "1px solid #1a73e8",
+                  background: "#fff",
+                  color: "#1a73e8",
+                  cursor: "pointer",
+                  fontWeight: 500,
+                  fontSize: "13px",
+                  textDecoration: "none",
+                  whiteSpace: "nowrap",
+                  transition: "background-color 0.2s",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "#f8f9fa";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "#fff";
+                }}
+              >
+                Select flight
+              </a>
             </div>
+          )}
+          {/* Chevron */}
+          <div
+            style={{
+              transform: expandedSummary[flight.rank] ? "rotate(180deg)" : "rotate(0deg)",
+              transition: "transform 0.2s",
+              color: "#5f6368",
+              fontSize: "20px",
+              lineHeight: 1,
+              cursor: "pointer",
+              justifySelf: "end",
+            }}
+          >
+            ▼
           </div>
         </div>
 
@@ -901,25 +1023,408 @@ export default function MapView() {
                   </div>
                 </div>
 
-            {flightResponse.best_flights && flightResponse.best_flights.length > 0 ? (
-              <>
-                {flightResponse.best_flights.map((option, idx) => renderBestFlightRow(option, idx))}
-                {flightResponse.other_flights && flightResponse.other_flights.length > 0 && (
-                  <>
-                    {flightResponse.other_flights.map((option, idx) => 
-                      renderBestFlightRow(option, (flightResponse.best_flights?.length || 0) + idx)
-                    )}
-                  </>
-                )}
-              </>
-            ) : (
-              (flightResponse.summary?.flights || flightResponse.flights || []).map(
-                renderSummaryFlightRow
-              )
-            )}
+            {(() => {
+              // Prioritize best_flights, fallback to other_flights, then summary
+              const flightsToDisplay = 
+                (flightResponse.best_flights && flightResponse.best_flights.length > 0)
+                  ? flightResponse.best_flights.slice(0, 6)
+                  : (flightResponse.other_flights && flightResponse.other_flights.length > 0)
+                  ? flightResponse.other_flights.slice(0, 6)
+                  : [];
+
+              if (flightsToDisplay.length > 0) {
+                return flightsToDisplay.map((option, idx) => renderBestFlightRow(option, idx));
+              } else {
+                return (flightResponse.summary?.flights || flightResponse.flights || []).slice(0, 6).map(
+                  renderSummaryFlightRow
+                );
+              }
+            })()}
           </div>
         )}
         </div>
+
+        {/* Map Section */}
+        {flightResponse?.coordinates && (
+          <div
+            style={{
+              marginTop: "40px",
+              backgroundColor: "#ffffff",
+              borderRadius: "12px",
+              padding: "24px",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+              border: "1px solid #e0e0e0",
+            }}
+          >
+            <h2 style={{ margin: "0 0 16px 0", fontSize: "24px", color: "#333" }}>Route Map</h2>
+            {(() => {
+              const coords = flightResponse.coordinates;
+              
+              // Check if we have at least departure and arrival airports for the route
+              const hasRoute = coords.departure_airport && coords.arrival_airport;
+              const hasAnyCoords = coords.departure_airport || coords.departure_place || coords.arrival_airport || coords.arrival_place;
+
+              if (!hasAnyCoords) {
+                return (
+                  <div style={{ padding: "20px", textAlign: "center", color: "#5f6368" }}>
+                    Coordinates not available for this route
+                  </div>
+                );
+              }
+
+              // Create custom icons for airports and places
+              // Blue icon for airports
+              const airportIcon = new L.Icon({
+                iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png",
+                shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+                iconSize: [25, 41],
+                iconAnchor: [12, 41],
+                popupAnchor: [1, -34],
+                shadowSize: [41, 41]
+              });
+
+              // Green icon for places
+              const placeIcon = new L.Icon({
+                iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png",
+                shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+                iconSize: [25, 41],
+                iconAnchor: [12, 41],
+                popupAnchor: [1, -34],
+                shadowSize: [41, 41]
+              });
+
+              // Collect all coordinates for bounds calculation
+              const allCoords: [number, number][] = [];
+              if (coords.departure_place) allCoords.push([coords.departure_place.lat, coords.departure_place.lon]);
+              if (coords.departure_airport) allCoords.push([coords.departure_airport.lat, coords.departure_airport.lon]);
+              if (coords.arrival_place) allCoords.push([coords.arrival_place.lat, coords.arrival_place.lon]);
+              if (coords.arrival_airport) allCoords.push([coords.arrival_airport.lat, coords.arrival_airport.lon]);
+
+              // Use airports for route calculation (actual flight path)
+              const depAirport = coords.departure_airport;
+              const arrAirport = coords.arrival_airport;
+              
+              // For center calculation, use airports if available, otherwise use places
+              const departure = depAirport || coords.departure_place;
+              const arrival = arrAirport || coords.arrival_place;
+
+              if (!departure || !arrival) {
+                // Prioritize arrival place for initial focus, then arrival airport, then average
+                let centerLat: number;
+                let centerLon: number;
+                if (coords.arrival_place) {
+                  centerLat = coords.arrival_place.lat;
+                  centerLon = coords.arrival_place.lon;
+                } else if (coords.arrival_airport) {
+                  centerLat = coords.arrival_airport.lat;
+                  centerLon = coords.arrival_airport.lon;
+                } else {
+                  const avgLat = allCoords.reduce((sum, coord) => sum + coord[0], 0) / allCoords.length;
+                  const avgLon = allCoords.reduce((sum, coord) => sum + coord[1], 0) / allCoords.length;
+                  centerLat = avgLat;
+                  centerLon = avgLon;
+                }
+                // When focusing on arrival location, use higher zoom for closer view
+                const zoom = 25;
+                // Set minZoom to prevent zooming out beyond regional view (no full world map)
+                const minZoom = 3;
+
+                return (
+                  <div style={{ height: "500px", width: "100%", borderRadius: "8px", overflow: "hidden" }}>
+                    <MapContainer
+                      center={[centerLat, centerLon]}
+                      zoom={zoom}
+                      minZoom={minZoom}
+                      scrollWheelZoom={true}
+                      worldCopyJump={false}
+                      style={{ height: "100%", width: "100%" }}
+                    >
+                      <ChangeView center={[centerLat, centerLon]} zoom={zoom} />
+                      <TileLayer
+                        url="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}"
+                        attribution='&copy; <a href="https://www.google.com/maps">Google Maps</a>'
+                        maxZoom={20}
+                        noWrap={true}
+                      />
+                      {coords.departure_place && (
+                        <Marker position={[coords.departure_place.lat, coords.departure_place.lon]} icon={placeIcon}>
+                          <Popup>
+                            <div style={{ textAlign: "center" }}>
+                              <strong>Departure Place</strong>
+                              <br />
+                              {coords.departure_place.lat.toFixed(4)}, {coords.departure_place.lon.toFixed(4)}
+                            </div>
+                          </Popup>
+                        </Marker>
+                      )}
+                      {coords.departure_airport && (
+                        <Marker position={[coords.departure_airport.lat, coords.departure_airport.lon]} icon={airportIcon}>
+                          <Popup>
+                            <div style={{ textAlign: "center" }}>
+                              <strong>Departure Airport</strong>
+                              <br />
+                              {coords.departure_airport.lat.toFixed(4)}, {coords.departure_airport.lon.toFixed(4)}
+                            </div>
+                          </Popup>
+                        </Marker>
+                      )}
+                      {coords.arrival_place && (
+                        <Marker position={[coords.arrival_place.lat, coords.arrival_place.lon]} icon={placeIcon}>
+                          <Popup>
+                            <div style={{ textAlign: "center" }}>
+                              <strong>Arrival Place</strong>
+                              <br />
+                              {coords.arrival_place.lat.toFixed(4)}, {coords.arrival_place.lon.toFixed(4)}
+                            </div>
+                          </Popup>
+                        </Marker>
+                      )}
+                      {coords.arrival_airport && (
+                        <Marker position={[coords.arrival_airport.lat, coords.arrival_airport.lon]} icon={airportIcon}>
+                          <Popup>
+                            <div style={{ textAlign: "center" }}>
+                              <strong>Arrival Airport</strong>
+                              <br />
+                              {coords.arrival_airport.lat.toFixed(4)}, {coords.arrival_airport.lon.toFixed(4)}
+                            </div>
+                          </Popup>
+                        </Marker>
+                      )}
+                      {/* Departure Connection: Place to Airport */}
+                      {coords.departure_place && coords.departure_airport && (
+                        <Polyline
+                          positions={[
+                            [coords.departure_place.lat, coords.departure_place.lon],
+                            [coords.departure_airport.lat, coords.departure_airport.lon]
+                          ]}
+                          pathOptions={{
+                            color: "#34a853",
+                            weight: 2,
+                            opacity: 0.6,
+                            dashArray: "10, 5",
+                          }}
+                        />
+                      )}
+                      {/* Arrival Connection: Airport to Place */}
+                      {coords.arrival_airport && coords.arrival_place && (
+                        <Polyline
+                          positions={[
+                            [coords.arrival_airport.lat, coords.arrival_airport.lon],
+                            [coords.arrival_place.lat, coords.arrival_place.lon]
+                          ]}
+                          pathOptions={{
+                            color: "#34a853",
+                            weight: 2,
+                            opacity: 0.6,
+                            dashArray: "10, 5",
+                          }}
+                        />
+                      )}
+                    </MapContainer>
+                  </div>
+                );
+              }
+
+              const depLat = departure.lat;
+              const depLon = departure.lon;
+              const arrLat = arrival.lat;
+              const arrLon = arrival.lon;
+              
+              // For route, use airports (actual flight path)
+              const routeStart = depAirport ? [depAirport.lat, depAirport.lon] : [depLat, depLon];
+              const routeEnd = arrAirport ? [arrAirport.lat, arrAirport.lon] : [arrLat, arrLon];
+
+              // Helper function for coordinate calculations
+              const toRad = (deg: number) => (deg * Math.PI) / 180;
+
+              // Calculate center point for the map - prioritize arrival place for initial focus
+              let centerLat: number;
+              let centerLon: number;
+              if (coords.arrival_place) {
+                centerLat = coords.arrival_place.lat;
+                centerLon = coords.arrival_place.lon;
+              } else if (coords.arrival_airport) {
+                centerLat = coords.arrival_airport.lat;
+                centerLon = coords.arrival_airport.lon;
+              } else {
+                // Fallback to average of all points
+                centerLat = allCoords.reduce((sum, coord) => sum + coord[0], 0) / allCoords.length;
+                centerLon = allCoords.reduce((sum, coord) => sum + coord[1], 0) / allCoords.length;
+              }
+
+              // Create a simple straight line route (just start and end points)
+              let routePath: [number, number][] = [];
+              // Only draw route if we have both airports (actual flight path)
+              if (hasRoute && depAirport && arrAirport) {
+                routePath = [
+                  routeStart as [number, number],
+                  routeEnd as [number, number]
+                ];
+              }
+
+              // Create line from departure place to departure airport
+              let departureConnectionPath: [number, number][] = [];
+              if (coords.departure_place && coords.departure_airport) {
+                departureConnectionPath = [
+                  [coords.departure_place.lat, coords.departure_place.lon],
+                  [coords.departure_airport.lat, coords.departure_airport.lon]
+                ];
+              }
+
+              // Create line from arrival airport to arrival place
+              let arrivalConnectionPath: [number, number][] = [];
+              if (coords.arrival_airport && coords.arrival_place) {
+                arrivalConnectionPath = [
+                  [coords.arrival_airport.lat, coords.arrival_airport.lon],
+                  [coords.arrival_place.lat, coords.arrival_place.lon]
+                ];
+              }
+
+              // Calculate zoom level based on bounds of all markers
+              const minLat = Math.min(...allCoords.map(c => c[0]));
+              const maxLat = Math.max(...allCoords.map(c => c[0]));
+              const minLon = Math.min(...allCoords.map(c => c[1]));
+              const maxLon = Math.max(...allCoords.map(c => c[1]));
+              
+              // Calculate distance for zoom calculation
+              const R = 6371; // Earth radius in km
+              const latDiff = toRad(maxLat - minLat);
+              const lonDiff = toRad(maxLon - minLon);
+              const a = Math.sin(latDiff / 2) * Math.sin(latDiff / 2) +
+                Math.cos(toRad(minLat)) * Math.cos(toRad(maxLat)) *
+                Math.sin(lonDiff / 2) * Math.sin(lonDiff / 2);
+              const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+              const distanceKm = R * c;
+
+              // Adjust zoom based on distance - if focusing on arrival place, zoom in more
+              let zoom = 5;
+              const isFocusingOnArrival = coords.arrival_place || coords.arrival_airport;
+              
+              if (isFocusingOnArrival) {
+                // When focusing on arrival location, use higher zoom for closer view
+                if (distanceKm < 500) zoom = 25;
+                else if (distanceKm < 1000) zoom = 22;
+                else if (distanceKm < 3000) zoom = 18;
+                else zoom = 15;
+              } else {
+                // When showing full route, use wider zoom
+                if (distanceKm < 500) zoom = 11;
+                else if (distanceKm < 1000) zoom = 9;
+                else if (distanceKm < 3000) zoom = 7;
+                else zoom = 5;
+              }
+              
+              // Set minZoom to prevent zooming out to full world map (which shows duplicates)
+              // Level 3 shows continental view without world map wrapping
+              const minZoom = 3;
+
+              return (
+                <div style={{ height: "500px", width: "100%", borderRadius: "8px", overflow: "hidden" }}>
+                  <MapContainer
+                    center={[centerLat, centerLon]}
+                    zoom={zoom}
+                    minZoom={minZoom}
+                    scrollWheelZoom={true}
+                    worldCopyJump={false}
+                    style={{ height: "100%", width: "100%" }}
+                    key={`${allCoords.map(c => `${c[0]}-${c[1]}`).join('_')}`}
+                  >
+                    <ChangeView center={[centerLat, centerLon]} zoom={zoom} />
+                    <TileLayer
+                      url="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}"
+                      attribution='&copy; <a href="https://www.google.com/maps">Google Maps</a>'
+                      maxZoom={20}
+                      noWrap={true}
+                    />
+                    {/* Departure Place Marker */}
+                    {coords.departure_place && (
+                      <Marker position={[coords.departure_place.lat, coords.departure_place.lon]} icon={placeIcon}>
+                        <Popup>
+                          <div style={{ textAlign: "center" }}>
+                            <strong>Departure Place</strong>
+                            <br />
+                            {coords.departure_place.lat.toFixed(4)}, {coords.departure_place.lon.toFixed(4)}
+                          </div>
+                        </Popup>
+                      </Marker>
+                    )}
+                    {/* Departure Airport Marker */}
+                    {coords.departure_airport && (
+                      <Marker position={[coords.departure_airport.lat, coords.departure_airport.lon]} icon={airportIcon}>
+                        <Popup>
+                          <div style={{ textAlign: "center" }}>
+                            <strong>Departure Airport</strong>
+                            <br />
+                            {coords.departure_airport.lat.toFixed(4)}, {coords.departure_airport.lon.toFixed(4)}
+                          </div>
+                        </Popup>
+                      </Marker>
+                    )}
+                    {/* Arrival Place Marker */}
+                    {coords.arrival_place && (
+                      <Marker position={[coords.arrival_place.lat, coords.arrival_place.lon]} icon={placeIcon}>
+                        <Popup>
+                          <div style={{ textAlign: "center" }}>
+                            <strong>Arrival Place</strong>
+                            <br />
+                            {coords.arrival_place.lat.toFixed(4)}, {coords.arrival_place.lon.toFixed(4)}
+                          </div>
+                        </Popup>
+                      </Marker>
+                    )}
+                    {/* Arrival Airport Marker */}
+                    {coords.arrival_airport && (
+                      <Marker position={[coords.arrival_airport.lat, coords.arrival_airport.lon]} icon={airportIcon}>
+                        <Popup>
+                          <div style={{ textAlign: "center" }}>
+                            <strong>Arrival Airport</strong>
+                            <br />
+                            {coords.arrival_airport.lat.toFixed(4)}, {coords.arrival_airport.lon.toFixed(4)}
+                          </div>
+                        </Popup>
+                      </Marker>
+                    )}
+                    {/* Departure Connection: Place to Airport */}
+                    {departureConnectionPath.length > 0 && (
+                      <Polyline
+                        positions={departureConnectionPath}
+                        pathOptions={{
+                          color: "#34a853",
+                          weight: 2,
+                          opacity: 0.6,
+                          dashArray: "10, 5",
+                        }}
+                      />
+                    )}
+                    {/* Flight Route (only if both airports exist) */}
+                    {routePath.length > 0 && (
+                      <Polyline
+                        positions={routePath}
+                        pathOptions={{
+                          color: "#1a73e8",
+                          weight: 3,
+                          opacity: 0.7,
+                        }}
+                      />
+                    )}
+                    {/* Arrival Connection: Airport to Place */}
+                    {arrivalConnectionPath.length > 0 && (
+                      <Polyline
+                        positions={arrivalConnectionPath}
+                        pathOptions={{
+                          color: "#34a853",
+                          weight: 2,
+                          opacity: 0.6,
+                          dashArray: "10, 5",
+                        }}
+                      />
+                    )}
+                  </MapContainer>
+                </div>
+              );
+            })()}
+          </div>
+        )}
     </div>
   );
 }

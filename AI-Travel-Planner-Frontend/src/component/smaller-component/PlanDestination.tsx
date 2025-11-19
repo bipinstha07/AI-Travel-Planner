@@ -1,4 +1,8 @@
-function PlanDestination() {
+interface PlanDestinationProps {
+  onDestinationClick?: (city: string) => void
+}
+
+function PlanDestination({ onDestinationClick }: PlanDestinationProps) {
   const destinations = [
     {
       city: "Paris, France",
@@ -26,12 +30,19 @@ function PlanDestination() {
     }
   ]
 
+  const handleCardClick = (city: string) => {
+    if (onDestinationClick) {
+      onDestinationClick(city)
+    }
+  }
+
   return (
     <div className="w-full  overflow-x-auto px-6 py-8">
       <div className="flex gap-6 max-w-7xl mx-auto">
         {destinations.map((destination, index) => (
           <div
             key={index}
+            onClick={() => handleCardClick(destination.city)}
             className="group relative shrink-0 w-72 h-96 rounded-3xl overflow-hidden shadow-lg transition-transform duration-300 ease-in-out hover:scale-105 cursor-pointer"
           >
             {/* Background Image */}
