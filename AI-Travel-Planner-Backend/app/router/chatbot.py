@@ -49,7 +49,9 @@ async def chat(request: Request):
         • Budget: {state.budget}
         • Departure City: {state.departure_city}
         • Trip Type: {state.trip_type}
+         suggestions: Create new plan\n\n
         """
+       
         return {
             "reply": summary,
             "variables": state.to_dict(),
@@ -57,6 +59,7 @@ async def chat(request: Request):
         }
 
     # --- Step 5: Continue conversation if not complete
+    
     return {
         "reply": result["reply"],
         "variables": state.to_dict(),
