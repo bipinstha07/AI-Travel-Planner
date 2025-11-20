@@ -11,7 +11,9 @@ function Header() {
       <nav className="flex items-center space-x-8">
         <a href="#" className="text-gray-600 hover:text-gray-800 transition-colors font-medium text-sm">Home</a>
         <a href="#" className="text-gray-600 hover:text-gray-800 transition-colors font-medium text-sm">Pricing</a>
-        <a href="#" className="text-gray-600 hover:text-gray-800 transition-colors font-medium text-sm">Contact Us</a>
+        <a href="#" className="text-gray-600 hover:text-gray-800 transition-colors font-medium text-sm">Destinations</a>
+        <a href="#" className="text-gray-600 hover:text-gray-800 transition-colors font-medium text-sm">Flights</a>
+        <a href="#" className="text-gray-600 hover:text-gray-800 transition-colors font-medium text-sm">Hotels</a>
       </nav>
       
       <div>
