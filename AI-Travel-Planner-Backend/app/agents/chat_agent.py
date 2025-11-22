@@ -46,26 +46,26 @@ class ChatAgent:
         # ---------------------------------------------------------------
         msg_lower = message.lower().strip()
 
-        # ------------------- Tomorrow -------------------
+        # tomorrow
         if "tomorrow" in msg_lower:
             state.extracted["start_date"] = (
                 datetime.now() + timedelta(days=1)
             ).strftime("%Y-%m-%d")
 
-        # ------------------- Next Weekend -------------------
+        # next weekend
         elif "next weekend" in msg_lower:
             today = datetime.now()
             days_until_sat = (5 - today.weekday()) % 7
             next_sat = today + timedelta(days=days_until_sat)
             state.extracted["start_date"] = next_sat.strftime("%Y-%m-%d")
 
-        # ------------------- Next Week -------------------
+        # next week
         elif "next week" in msg_lower:
             state.extracted["start_date"] = (
                 datetime.now() + timedelta(days=7)
             ).strftime("%Y-%m-%d")
 
-        # ------------------- Next Month -------------------
+        # next month
         elif "next month" in msg_lower:
             today = datetime.now()
             if today.month == 12:
@@ -85,13 +85,17 @@ class ChatAgent:
             state.extracted["start_date"] = chosen.strftime("%Y-%m-%d")
 
         # ---------------------------------------------------------------
-        # MISSING FIELDS
+        # MISSING FIELDS (WITH DATE LOCK FIX)
         # ---------------------------------------------------------------
         missing_fields = [k for k, v in state.extracted.items() if not v]
-        next_field = missing_fields[0] if missing_fields else None
+
+        # ❗ Fix: NEVER ask for start_date again if pre-parsed already filled it
+        if state.extracted["start_date"]:
+            if "start_date" in missing_fields:
+                missing_fields.remove("start_date")
 
         # ---------------------------------------------------------------
-        # BUILD PROMPT
+        # BUILD PROMPT (with new rules)
         # ---------------------------------------------------------------
         prompt = f"""
 You are a friendly AI travel planner.
@@ -101,41 +105,46 @@ Current known info: {state.extracted}
 User said: "{message}"
 
 GENERAL RULES:
-- When the user greets you, greet them back and ask for their destination.
-- Keep your answers short, warm, and easy to read.
+- Keep responses short, friendly, and warm.
+- Ask only ONE missing detail at a time.
+- Never ask for a field that is already filled.
+- Never modify an existing field unless user explicitly says to change it.
+
+DATE RULE FIX:
+- If start_date has been set by system-level rules (tomorrow, next weekend, next week, next month),
+  the model MUST treat it as final.
+  - Today is {date_today}. - Natural options allowed: "tomorrow", "next week", "next weekend", "next month". 
+  - DO NOT output ISO dates unless user explicitly asks. 
+  - All dates must be future dates.
+- The model MUST NOT ask again for start_date.
+- Always move to the next missing field directly.
 
 DESTINATION RULES:
-- Accept real destinations:
-  cities (Paris, Tokyo), regions (Swiss Alps), named parks (Banff).
-- Reject generic nature words:
-  rainforest, forest, jungle, mountains, mountain range, beach, island, lake, desert, valley, canyon.
-- If generic: ask "Which specific place?" and provide 3–5 real examples.
-
-DATE RULES:
-- Today is {date_today}.
-- Natural options allowed: "tomorrow", "next week", "next weekend", "next month".
-- DO NOT output ISO dates unless user explicitly asks.
-- All dates must be future dates.
-
-CONVERSATION RULES:
-- Ask only one missing detail at a time.
-- Do NOT repeat questions.
-- If user says “more” → generate new suggestions.
-- After user gives info → acknowledge and move to next field.
+- Accept real cities (Tokyo), countries (Japan), regions (Swiss Alps), named places (Banff).
+- Reject generic nature words (mountain, forest, rainforest, island, desert, etc.)
+- If user gives generic place → ask “Which specific place?” and suggest 3–5  examples of places like kathmandu, Sydney, Bali.
 
 SUGGESTION RULES:
-- Suggestions MUST relate to the *next missing field*.
+- Suggestions MUST relate to the next missing field.
+- suggest 3–5  places like kathmandu, Sydney, Bali on the destination field.
 - MAX 4 suggestions.
-- Must be short (1–4 words).
-- Never break numbers across lines.
-- Budget examples: "$1000-$2000", "$2000-$4000", "luxury", "no limit".
-- Always use single-hyphen numeric ranges: "$4000-$6000".
+- Example budgets: "$1000-$2000", "$2000-$4000", "luxury", "no limit".
+
+RESET RULES:
+- If user says "reset", "start over", "new plan", "new trip", "new journey", reset everything.
+
+DATE VALIDATION:
+- If user provides a date, validate it’s a valid future date.
+- If user provides a date in the past, reject it.
+- If user provides a date in the future, accept it.
+- If user provides a date in the past, reject it.
+- if user provides date like "next month", "next week", "next weekend", "tomorrow", convert it to ISO date year-month-day.
 
 RETURN JSON ONLY:
 {{
   "reply": "text",
   "field_updates": {{}},
-  "suggestions": ["one", "two", "three"]
+  "suggestions": ["one", "two"]
 }}
 """
 
@@ -165,7 +174,7 @@ RETURN JSON ONLY:
             }
 
         # ---------------------------------------------------------------
-        # UPDATE FIELDS (WITH FULL NORMALIZATION)
+        # UPDATE FIELDS
         # ---------------------------------------------------------------
         for k, v in data.get("field_updates", {}).items():
             if v is None:
@@ -173,48 +182,7 @@ RETURN JSON ONLY:
 
             value = str(v).strip().lower()
 
-            # ==============================
-            # START DATE NORMALIZATION
-            # ==============================
-            if k == "start_date":
-
-                # tomorrow
-                if "tomorrow" in value:
-                    value = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
-
-                # next weekend
-                elif "next weekend" in value:
-                    today = datetime.now()
-                    days_until_sat = (5 - today.weekday()) % 7
-                    next_sat = today + timedelta(days=days_until_sat)
-                    value = next_sat.strftime("%Y-%m-%d")
-
-                # next week
-                elif "next week" in value:
-                    value = (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d")
-
-                # next month + variants
-                elif "next month" in value:
-                    today = datetime.now()
-                    if today.month == 12:
-                        base = datetime(today.year + 1, 1, 1)
-                    else:
-                        base = datetime(today.year, today.month + 1, 1)
-
-                    if "early" in value or "beginning" in value:
-                        chosen = base
-                    elif "mid" in value:
-                        chosen = base + timedelta(days=14)
-                    elif "late" in value or "end" in value:
-                        chosen = base.replace(day=28)
-                    else:
-                        chosen = base
-
-                    value = chosen.strftime("%Y-%m-%d")
-
-            # ==============================
             # NUM DAYS NORMALIZATION
-            # ==============================
             if k == "num_days":
                 cleaned = value.replace("days", "").replace("day", "")
                 cleaned = cleaned.replace("to", "-").replace("–", "-").replace("—", "-")
@@ -225,7 +193,7 @@ RETURN JSON ONLY:
                         nums = [int(x.strip()) for x in p if x.strip().isdigit()]
                         if len(nums) == 2:
                             mid = (nums[0] + nums[1]) // 2
-                            value = str(mid)  # store middle value only
+                            value = str(mid)
                     except:
                         pass
                 else:
@@ -234,16 +202,20 @@ RETURN JSON ONLY:
                     except:
                         pass
 
-            # Save normalized value
+            # Save value
             state.extracted[k] = value
 
         # ---------------------------------------------------------------
-        # RECHECK MISSING
+        # RECHECK MISSING (AFTER FIX)
         # ---------------------------------------------------------------
         missing_fields = [k for k, v in state.extracted.items() if not v]
 
+        # Again remove start_date if already locked in
+        if state.extracted["start_date"]:
+            missing_fields = [f for f in missing_fields if f != "start_date"]
+
         # ---------------------------------------------------------------
-        # FINAL SUMMARY
+        # FULLY COMPLETED
         # ---------------------------------------------------------------
         if not missing_fields:
             summary = (
@@ -274,9 +246,7 @@ RETURN JSON ONLY:
         else:
             reply = data["reply"]
 
-        # ---------------------------------------------------------------
-        # SUGGESTIONS
-        # ---------------------------------------------------------------
+        # Suggestions
         suggestions = data.get("suggestions", [])
         if suggestions:
             reply += " suggestions: " + ", ".join(suggestions)

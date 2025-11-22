@@ -1,7 +1,9 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
-import Home from './component/Home'
 import Header from './header/Header'
+import LandingPage from './pages/LandingPage'
+import ChatPage from './pages/ChatPage'
 import TestPage from './test/TestPage'
+import LiveBackground from './component/background/LiveBackground'
 
 
 function App() {
@@ -10,10 +12,16 @@ function App() {
       <Routes>
         <Route path="/test" element={<TestPage />} />
         <Route path="/" element={
-          <div className="bg-gradient-to-br from-cyan-50 via-blue-50 to-teal-50">
+          <LiveBackground>
             <Header />
-            <Home />
-          </div>
+            <LandingPage />
+          </LiveBackground>
+        } />
+        <Route path="/chat" element={
+          <LiveBackground fixed={true}>
+            <Header />
+            <ChatPage />
+          </LiveBackground>
         } />
       </Routes>
     </Router>
