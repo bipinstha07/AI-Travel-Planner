@@ -499,21 +499,22 @@ function ChatPage() {
   }
 
   return (
-    <div className='flex-1 flex flex-col min-h-0 overflow-hidden relative'>
+    <div className='h-[90vh]  flex flex-col'>
       {/* Chat Box */}
-        <div className='w-full flex-1 flex relative min-h-0'>
+        <div className='w-full flex relative' style={{ height: 'calc(100vh - 80px)' }}>
           <div 
-            className={`h-full overflow-y-auto px-6 py-4 scrollbar-minimal bg-transparent transition-all duration-300 ease-in-out pb-48 ${
+            className={`h-full overflow-y-auto px-6 scrollbar-minimal bg-transparent transition-all duration-300 ease-in-out pb-48 ${
               isRightPanelExpanded ? 'w-[5%]' : 'w-[40%]'
             }`}
             style={{
               scrollbarWidth: 'thin',
-              scrollbarColor: '#d1d5db transparent'
+              scrollbarColor: '#d1d5db transparent',
+              scrollbarGutter: 'stable'
             }}
           >
           {/* New Plan Button */}
           {!isRightPanelExpanded && (
-            <div className='sticky top-0 z-30'>
+            <div className='sticky top-0 z-30 py-4'>
               <button
                 onClick={(e) => {
                   e.preventDefault()
@@ -532,7 +533,7 @@ function ChatPage() {
               </button>
             </div>
           )}
-          <div className={`flex flex-col gap-2 py-4 ${isRightPanelExpanded ? 'hidden' : ''}`}>
+          <div className={`flex flex-col gap-2 pb-4 ${isRightPanelExpanded ? 'hidden' : ''}`}>
             {messages.map((message) => (
               <div
                 key={message.id}
@@ -601,48 +602,13 @@ function ChatPage() {
           
           <div className='w-full h-full rounded-2xl overflow-y-auto overflow-x-hidden bg-white/90 backdrop-blur-xl shadow-lg border border-white/20 relative'>
             {!isDone ? (
-              <TripDesigner />
+              <TripDesigner mode="processing" />
             ) : (
               // Trip information and itinerary when done
               <div className="w-full h-full p-6 bg-white/80 backdrop-blur-sm relative overflow-y-hidden overflow-x-hidden">
                 {isLoadingItinerary ? (
                   // Processing Steps Animation
-                  <div className="w-full h-full flex flex-col items-center justify-center px-4 py-6">
-                    <div className="w-full max-w-lg flex flex-col h-full">
-                      {/* Processing Steps */}
-                      <div className="space-y-2 overflow-y-auto flex-1 pr-2 mb-4" style={{ scrollbarWidth: 'thin' }}>
-                        {processingSteps.map((step, index) => {
-                          const isActive = index === currentProcessingStep
-                          const isCompleted = index < currentProcessingStep
-                          
-                          return (
-                            <div
-                              key={index}
-                              ref={isActive ? activeStepRef : null}
-                              className={`flex items-center gap-3 py-3 px-4 rounded-lg transition-all duration-300 ${
-                                isActive ? 'bg-blue-50/50 border-l-2 border-blue-600' : isCompleted ? 'opacity-60' : 'opacity-40'
-                              }`}
-                            >
-                              <div className="shrink-0 w-5 flex items-center justify-center">
-                                {isActive ? (
-                                  <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                                ) : isCompleted ? (
-                                   <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"/></svg>
-                                ) : (
-                                  <div className="w-4 h-4 border border-gray-300 rounded-full"></div>
-                                )}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className={`text-sm font-medium transition-all duration-300 ${isActive ? 'text-gray-900' : 'text-gray-500'}`}>
-                                  {step.text}
-                                </p>
-                              </div>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  </div>
+                  <TripDesigner mode="idle" />
                 ) : !itinerary ? (
                     // Trip Summary before Itinerary Generation
                     <div className="mb-6">
@@ -651,43 +617,14 @@ function ChatPage() {
                         <p className="text-sm text-gray-500 mt-1">Review your travel details</p>
                       </div>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                         {/* Variable cards */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
+                         {/* Variable cards - Simplified loop */}
                          {tripVariables && Object.entries(tripVariables).map(([key, value]) => {
                             if (!value) return null;
-                            
-                            // Determine icon and color based on key
-                            let icon = (
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            );
-                            let colorClass = "text-blue-500 bg-blue-50";
-                            
-                            const lowerKey = key.toLowerCase();
-                            if (lowerKey.includes('destination') || lowerKey.includes('city')) {
-                              icon = <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>;
-                              colorClass = "text-orange-500 bg-orange-50";
-                            } else if (lowerKey.includes('date') || lowerKey.includes('day')) {
-                              icon = <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>;
-                              colorClass = "text-indigo-500 bg-indigo-50";
-                            } else if (lowerKey.includes('budget')) {
-                              icon = <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>;
-                              colorClass = "text-emerald-500 bg-emerald-50";
-                            } else if (lowerKey.includes('trip') || lowerKey.includes('type')) {
-                              icon = <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>;
-                              colorClass = "text-purple-500 bg-purple-50";
-                            }
-
                             return (
-                              <div key={key} className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm hover:shadow-lg transition-all duration-300 group">
-                                <div className="flex items-start gap-4">
-                                  <div className={`p-3 rounded-xl ${colorClass} group-hover:scale-110 transition-transform duration-300`}>
-                                    {icon}
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">{key.replace('_', ' ')}</p>
-                                    <p className="text-lg font-bold text-gray-900 truncate leading-tight group-hover:text-orange-600 transition-colors">{value}</p>
-                                  </div>
-                                </div>
+                              <div key={key} className="bg-white/80 backdrop-blur-sm rounded-2xl border border-gray-200/50 p-4">
+                                <p className="text-xs font-medium text-blue-600 uppercase tracking-wider mb-1.5">{key.replace('_', ' ')}</p>
+                                <p className="text-base font-semibold text-gray-900 truncate">{value}</p>
                               </div>
                             )
                          })}
@@ -696,31 +633,9 @@ function ChatPage() {
                       <button
                         onClick={handleGenerateItinerary}
                         disabled={isLoadingItinerary}
-                        className="w-full group relative px-6 py-44 bg-linear-to-b from-[#051e3e] via-[#1e3a5f] to-[#e8a685] text-white font-bold rounded-2xl transition-all shadow-xl hover:shadow-2xl flex items-center justify-center gap-3 overflow-hidden hover:scale-[1.02]"
+                        className="w-full px-6 py-3.5 bg-orange-500 hover:bg-orange-600 cursor-pointer text-white font-medium rounded-2xl transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
                       >
-                        {/* Shimmer Effect */}
-                        <div className="absolute inset-0 w-full h-full bg-linear-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] z-10"></div>
-                        
-                        {/* Shooting Stars - Miniature version of LiveBackground */}
-                        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                          {[...Array(3)].map((_, i) => (
-                            <div
-                              key={i}
-                              className="absolute w-px h-[20px] bg-linear-to-b from-transparent via-white/80 to-white rounded-full animate-shooting-star opacity-0"
-                              style={{
-                                top: `${Math.random() * -50}%`, 
-                                left: `${Math.random() * 50}%`,
-                                animationDelay: `${Math.random() * 3}s`,
-                                animationDuration: `${1.5 + Math.random()}s`,
-                              }}
-                            />
-                          ))}
-                        </div>
-
-                        <span className="relative text-lg drop-shadow-md z-20">Generate Dream Itinerary</span>
-                        <svg className="w-5 h-5 relative group-hover:translate-x-1 transition-transform drop-shadow-md z-20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                        </svg>
+                        <span>Create Itinerary</span>
                       </button>
                     </div>
                 ) : (
@@ -756,7 +671,7 @@ function ChatPage() {
             </div>
           )}
           
-          <div className={`flex items-center gap-2 bg-white/95 backdrop-blur-xl rounded-full border border-white/20 shadow-lg px-4 py-2 transition-all duration-300 ease-in-out hover:shadow-orange-500/10 focus-within:ring-2 focus-within:ring-orange-500/50 w-full max-w-2xl mx-auto`}>
+          <div className={`flex items-center gap-2 bg-white/95 backdrop-blur-xl rounded-full border border-white/20 shadow-lg px-4 py-2 transition-all duration-300 ease-in-out hover:shadow-orange-500/10 focus-within:ring-1 focus-within:ring-orange-500/50 w-full max-w-2xl mx-auto`}>
           {/* Attachment icon */}
           <button className="p-1.5 text-gray-400 hover:text-orange-500 transition-colors">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">

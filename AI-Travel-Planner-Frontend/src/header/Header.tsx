@@ -1,12 +1,15 @@
+import { Link } from 'react-router-dom'
 
 function Header() {
   return (
     <header className="w-full px-2 py-4 z-50 flex justify-center sticky top-0">
-      <div className="flex items-center justify-between w-full max-w-7xl bg-white/60 backdrop-blur-md px-4 py-1 rounded-full shadow-sm border border-white/20 transition-all hover:bg-white/80">
+      <div className="flex items-center justify-between w-full max-w-7xl bg-white/90 backdrop-blur-md px-4 py-1 rounded-full shadow-sm border border-white/20 transition-all hover:bg-white/80">
+        <Link to="/">
         <div className="flex items-center gap-2">
          <img src="/logo.png" alt="Travel.AI" className="w-10 h-10" />
           <h1 className='text-xl text-gray-900 font-bold tracking-tight'>Travel.AI</h1>
         </div>
+        </Link>
         
         <nav className="hidden md:flex items-center space-x-8">
           <a href="/" className="text-gray-600 hover:text-orange-500 transition-colors font-semibold text-sm">Home</a>

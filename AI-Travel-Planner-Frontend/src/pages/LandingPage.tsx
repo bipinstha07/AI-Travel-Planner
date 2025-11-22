@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import PlanDestination from '../component/smaller-component/PlanDestination'
+import HowItWorks from '../component/landing/HowItWorks'
 import Pricing from '../component/landing/Pricing'
+import FAQ from '../component/landing/FAQ'
 import Footer from '../footer/Footer'
 
 function LandingPage() {
@@ -65,7 +67,7 @@ function LandingPage() {
             <span>AI-Powered Travel Planning</span>
           </div>
           <h1 className='text-5xl md:text-7xl font-bold text-white mb-6 tracking-tight drop-shadow-sm'>
-            Never Forget <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-200 to-orange-100">Anything</span>
+            Plan Your <span className="text-transparent bg-clip-text bg-linear-to-r from-orange-200 to-orange-100"> Travel</span>
           </h1>
           <p className='text-gray-200 text-xl max-w-2xl mx-auto font-light'>
             Your personal AI travel companion that plans, tracks, and organizes your perfect journey.
@@ -101,7 +103,7 @@ function LandingPage() {
                 </svg>
               </button>
               <button 
-                className='h-10 w-10 flex items-center justify-center rounded-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-orange-500/30 transform hover:scale-105' 
+                className='h-10 w-10 flex items-center justify-center rounded-full bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-orange-500/30 transform hover:scale-105' 
                 aria-label='Send'
                 onClick={() => handleSearch(inputValue)}
                 disabled={!inputValue.trim()}
@@ -114,7 +116,7 @@ function LandingPage() {
           </div>
 
           {/* Suggestion Keywords */}
-          <div className='flex flex-wrap gap-3 mt-8 justify-center items-center max-w-4xl mx-auto'>
+          <div className='flex flex-wrap gap-3 mt-8 mb-18 justify-center items-center max-w-4xl mx-auto'>
             {suggestions.map((suggestion, index) => (
               <button
                 key={index}
@@ -143,9 +145,19 @@ function LandingPage() {
         handleSearch(`plan a trip to ${city}`)
       }} />
       
+      {/* How It Works Section */}
+      <div className="mt-20">
+        <HowItWorks />
+      </div>
+
       {/* Pricing Section */}
       <div className="mt-20">
         <Pricing />
+      </div>
+
+      {/* FAQ Section */}
+      <div className="mt-10">
+        <FAQ />
       </div>
       
       {/* Footer */}
