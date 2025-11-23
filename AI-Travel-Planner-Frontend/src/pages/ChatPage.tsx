@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
+import { GoogleGenerativeAI } from '@google/generative-ai'
 import type { 
   Message, 
   ChatResponse, 
@@ -9,12 +10,26 @@ import type {
 import ItineraryView from '../component/itinerary/ItineraryView'
 import TripDesigner from '../component/chat/TripDesigner'
 
+// Environment variable for Gemini API Key
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || '';
+
+// Initialize Gemini Client
+const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
+
 function ChatPage() {
   const location = useLocation()
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
-  const [tripVariables, setTripVariables] = useState<ChatResponse['variables'] | null>(null)
+  const [tripVariables, setTripVariables] = useState<ChatResponse['variables']>({
+    destination: null,
+    start_date: null,
+    num_days: null,
+    budget: null,
+    departure_city: null,
+    trip_type: null
+  })
   const [isDone, setIsDone] = useState(false)
   const [itinerary, setItinerary] = useState<ItineraryData | null>(null)
   const [isLoadingItinerary, setIsLoadingItinerary] = useState(false)
@@ -59,6 +74,114 @@ function ChatPage() {
     }
   }, [isLoading, messages])
 
+  const callGeminiAPI = async (userMessage: string, currentVars: ChatResponse['variables'], lastAiMessage: string) => {
+    if (!GEMINI_API_KEY) {
+      throw new Error('Gemini API Key is missing. Please set VITE_GEMINI_API_KEY in your environment variables.');
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+
+    const prompt = `
+      You are an AI travel planner assistant. Your goal is to collect specific trip details from the user to plan a perfect trip.
+      
+      CURRENT DATE: ${today}
+      
+      REQUIRED INFORMATION:
+      1. Destination (City or Country)
+      2. Departure City (Where they are flying from)
+      3. Start Date (Approximate or specific)
+      4. Number of Days (Duration)
+      5. Trip Type (e.g., Leisure, Adventure, Family, Romantic, Business)
+      6. Budget (e.g., Low, Medium, High, or specific amount)
+
+      CURRENT COLLECTED INFORMATION:
+      ${JSON.stringify(currentVars)}
+
+      LAST AI MESSAGE: ${JSON.stringify(lastAiMessage)}
+      USER'S LATEST MESSAGE: ${JSON.stringify(userMessage)}
+
+      CRITICAL INSTRUCTION - READ THIS FIRST:
+      - Look at "CURRENT COLLECTED INFORMATION" above.
+      - DO NOT ask for a field that is already NOT NULL in "CURRENT COLLECTED INFORMATION".
+      - If "destination" is NULL, the user's message is likely the destination (unless they are asking for suggestions).
+      - If "destination" is SET, but "departure_city" is NULL, the user's message IS the departure city.
+      - NEVER ask for the same field twice. If a field is not null, move to the next one.
+
+      STRICT VARIABLE UPDATE LOGIC:
+      - If (destination == null), set "destination" = "${userMessage}" (unless user is asking for ideas).
+      - If (destination != null) AND (departure_city == null), set "departure_city" = "${userMessage}".
+      - If (destination != null) AND (departure_city != null) AND (start_date == null), set "start_date" = "${userMessage}".
+      - If (destination != null) AND (departure_city != null) AND (start_date != null) AND (num_days == null), set "num_days" = "${userMessage}".
+      - If (destination != null) AND (departure_city != null) AND (start_date != null) AND (num_days != null) AND (budget == null), set "budget" = "${userMessage}".
+      - If (destination != null) AND (departure_city != null) AND (start_date != null) AND (num_days != null) AND (budget != null) AND (trip_type == null), set "trip_type" = "${userMessage}".
+      - If (destination != null) AND (departure_city != null) AND (start_date != null) AND (num_days != null) AND (budget != null) AND (trip_type != null), set "done" = true.
+
+      GENERAL RULES:
+      - Keep responses short, friendly, and warm.
+      - Ask only ONE missing detail at a time.
+      - Never modify an existing field unless user explicitly says to change it.
+      - ALWAYS provide 3-4 relevant suggestions for the specific question you are asking (e.g., if asking for destination, suggest cities; if asking for budget, suggest ranges).
+      - If you are asking for "trip type", provide suggestions like: Leisure, Adventure, Family, Romantic, Business.
+      - If you are asking for "budget", provide suggestions like: Low, Medium, High.
+      - If you just collected "budget", DO NOT ask for "budget" again. Move to "trip_type".
+      - If you just collected "trip_type", DO NOT ask for "trip_type" again. Move to the next field or finish.
+
+      CONTEXT AWARENESS RULES:
+      - If "LAST AI MESSAGE" asked for destination, user message is destination.
+      - If "LAST AI MESSAGE" asked for departure/flying from, user message is departure_city.
+      - If "LAST AI MESSAGE" asked for dates, user message is start_date.
+      - If "LAST AI MESSAGE" asked for duration/days, user message is num_days.
+      - If "LAST AI MESSAGE" asked for budget, user message is budget.
+      - If "LAST AI MESSAGE" asked for trip type, user message is trip_type.
+
+      DATE HANDLING:
+      - Today is ${today}.
+      - Convert terms like "tomorrow", "next week" to YYYY-MM-DD format for variables.
+      - Dates must be in the future.
+      - IMPORTANT: The "start_date" variable in the JSON output MUST ALWAYS be in ISO 8601 format (YYYY-MM-DD). Never use natural language for the start_date variable.
+
+      COMPLETION:
+      - If all 6 pieces of information (destination, departure_city, start_date, num_days, trip_type, budget) are collected, set "done" to true.
+      - DO NOT ask any further questions.
+      - DO NOT ask for confirmation.
+      - Reply ONLY with: "Great! I have all the details. Please click on 'Create Itinerary' to generate your personalized travel plan."
+
+      RETURN FORMAT:
+      Return ONLY a valid JSON object with this exact structure (no markdown formatting):
+      {
+        "reply": "Your conversational response to the user...",
+        "suggestions": ["Suggestion 1", "Suggestion 2", "Suggestion 3"],
+        "variables": {
+          "destination": "...",
+          "departure_city": "...",
+          "start_date": "...",
+          "num_days": "...",
+          "trip_type": "...",
+          "budget": "..."
+        },
+        "done": boolean
+      }
+    `;
+
+    try {
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      const textResponse = response.text();
+
+      if (!textResponse) {
+        throw new Error('Invalid response from Gemini API');
+      }
+
+      // Clean up markdown code blocks if present
+      const jsonString = textResponse.replace(/```json/g, '').replace(/```/g, '').trim();
+      
+      return JSON.parse(jsonString);
+    } catch (error) {
+       console.error("Gemini API Error:", error);
+       throw error;
+    }
+  };
+
   const handleSubmit = async (messageOverride?: string) => {
     const messageToSend = messageOverride || inputValue
     console.log('Input Value:', messageToSend)
@@ -83,46 +206,55 @@ function ChatPage() {
     }
     setMessages(prev => [...prev, userMessage])
 
+    // Get the last message from the current messages state
+    // This represents the AI's last response before the user typed this current message
+    // Note: 'messages' state here is still the old state before the update above
+    const lastAiMessage = messages.filter(m => !m.isUser).slice(-1)[0]?.text || '';
+
+    // Check if all required variables are already filled
+    if (
+      tripVariables.destination &&
+      tripVariables.departure_city &&
+      tripVariables.start_date &&
+      tripVariables.num_days &&
+      tripVariables.budget &&
+      tripVariables.trip_type
+    ) {
+      // All variables filled, set done directly without calling AI
+      setIsDone(true);
+      
+      // Add a final system message
+      const completionMessage: Message = {
+        id: Date.now() + 1,
+        text: "Great! I have all the details. Please click on 'Create Itinerary' to generate your personalized travel plan.",
+        isUser: false,
+        timestamp: new Date()
+      }
+      setMessages(prev => [...prev, completionMessage])
+      setIsLoading(false)
+      return;
+    }
+
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          user_message: messageText,
-        }),
-      })
+      // Call Gemini API instead of backend
+      const data = await callGeminiAPI(messageText, tripVariables || {
+        destination: null,
+        start_date: null,
+        num_days: null,
+        budget: null,
+        departure_city: null,
+        trip_type: null
+      }, lastAiMessage);
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-
-      const data: ChatResponse = await response.json()
-      console.log('Response:', data)
+      console.log('Gemini Response:', data)
       
-      // Parse suggestions from reply text
-      let replyText = data.reply || 'Thank you for your query! Our AI travel planner is processing your request.'
-      let suggestions: string[] = []
+      // Update API suggestions
+      setApiSuggestions(data.suggestions || [])
       
-      // Check if reply contains "suggestions:" and extract them
-      const suggestionsMatch = replyText.match(/suggestions:\s*(.+)/i)
-      if (suggestionsMatch) {
-        // Extract suggestions part
-        const suggestionsText = suggestionsMatch[1].trim()
-        // Parse comma-separated suggestions
-        suggestions = suggestionsText.split(',').map(s => s.trim()).filter(s => s.length > 0)
-        // Remove suggestions part from the displayed message
-        replyText = replyText.replace(/suggestions:.*/i, '').trim()
-      }
-      
-      // Update API suggestions - replace with new ones
-      setApiSuggestions(suggestions)
-      
-      // Add AI response to chat (without suggestions part)
+      // Add AI response to chat
       const aiMessage: Message = {
         id: Date.now() + 1,
-        text: replyText,
+        text: data.reply,
         isUser: false,
         timestamp: new Date()
       }
@@ -131,20 +263,36 @@ function ChatPage() {
       
       // Update trip variables from response
       if (data.variables) {
-        setTripVariables(data.variables)
+        console.log('Trip Variables Update:', data.variables); // Log variables for debugging
+        // Merge with existing variables to ensure we don't lose anything if AI returns null for known vars
+        setTripVariables(prev => {
+          const newVars = { ...prev };
+          
+          // Only update fields that are NOT null in the incoming data
+          Object.entries(data.variables).forEach(([key, value]) => {
+            if (value !== null && value !== undefined && value !== "") {
+              // @ts-ignore - key is keyof ChatResponse['variables']
+              newVars[key] = value;
+            }
+          });
+          
+          console.log('New Trip Variables State:', newVars);
+          return newVars;
+        })
       }
       
       // Update done status
       setIsDone(data.done)
       
-      // Don't set itinerary from chat response - it will be set when user clicks "Generate Itinerary"
     } catch (err) {
       console.error('Error calling chat API:', err)
       
       // Add error message to chat
       const errorMessage: Message = {
         id: Date.now() + 1,
-        text: 'Sorry, I encountered an error processing your request. Please try again.',
+        text: err instanceof Error && err.message.includes('API Key') 
+          ? 'Please configure your Gemini API Key in the .env file.' 
+          : 'Sorry, I encountered an error processing your request. Please try again.',
         isUser: false,
         timestamp: new Date()
       }
@@ -393,31 +541,36 @@ function ChatPage() {
     setIsLoading(true)
     
     try {
-      console.log('Calling reset_chat API...')
-      const response = await fetch('http://127.0.0.1:8000/api/reset_chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({}),
-      })
-
-      console.log('Reset chat response status:', response.status)
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-
-      const data = await response.json()
-      console.log('Reset chat response:', data)
+      // For frontend-only logic, we just reset state
+      // If we still want to notify backend, we can, but it's optional if we are fully frontend for chat
+      // await fetch('http://127.0.0.1:8000/api/reset_chat', { method: 'POST' })
 
       // Reset all state but keep chat view open
       setMessages([])
-      setTripVariables(null)
+      setTripVariables({
+        destination: null,
+        start_date: null,
+        num_days: null,
+        budget: null,
+        departure_city: null,
+        trip_type: null
+      })
       setIsDone(false)
       setItinerary(null)
       setInputValue('')
       setApiSuggestions([])
+
+      // Send initial greeting for new plan
+      const initialGreeting: Message = {
+        id: Date.now(),
+        text: "Hi! Ready to plan your next adventure? Where would you like to go? ",
+        isUser: false,
+        timestamp: new Date()
+      }
+      setMessages([initialGreeting])
+
+      // Set initial suggestions for destination
+      setApiSuggestions(["Paris, France", "Tokyo, Japan", "New York, USA", "Bali, Indonesia"])
       
       // Focus input after reset
       setTimeout(() => {
@@ -425,13 +578,6 @@ function ChatPage() {
       }, 100)
     } catch (err) {
       console.error('Error resetting chat:', err)
-      // Still reset the UI even if API call fails
-      setMessages([])
-      setTripVariables(null)
-      setIsDone(false)
-      setItinerary(null)
-      setInputValue('')
-      setApiSuggestions([])
     } finally {
       setIsLoading(false)
     }
@@ -456,12 +602,16 @@ function ChatPage() {
     // Simulate processing steps with delays (8 steps)
     const stepDelays = [1000, 1200, 1300, 1400, 1500, 1600, 1700, 1800]
     
-    // Start API call immediately
+    // Since we are using frontend collection, we might need to send the data to the backend
+    // Or if the backend is not set up to receive it, we might have issues.
+    // Assuming we still call the existing endpoint for now, but ideally this should be a POST with tripVariables
+    
     const apiCallPromise = fetch('http://127.0.0.1:8000/api/generate_itinerary', {
-      method: 'GET',
+      method: 'POST', 
       headers: {
         'Content-Type': 'application/json',
       },
+      body: JSON.stringify(tripVariables)
     })
     
     // Show processing steps while API call is in progress
@@ -476,8 +626,19 @@ function ChatPage() {
       // Wait for both API call and steps to complete
       const [response] = await Promise.all([apiCallPromise, stepsPromise])
       
+      // Clone response to avoid body used already errors
+      const clonedResponse = response.clone();
+      
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        try {
+          const errorData = await clonedResponse.json();
+          errorMessage = errorData.detail || errorData.message || errorMessage;
+        } catch (e) {
+          // Could not parse error json, use status text
+          errorMessage = `HTTP error! status: ${response.status} ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
       }
 
       const data: ItineraryResponse = await response.json()

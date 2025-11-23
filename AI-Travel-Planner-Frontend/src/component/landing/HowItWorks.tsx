@@ -13,7 +13,7 @@ const ChatMockup = () => {
   }, [])
 
   return (
-    <div className="w-full h-full bg-[#0f172a] p-4 flex flex-col gap-3 rounded-xl overflow-hidden border border-white/10 relative font-sans">
+    <div className="w-full h-full bg-[#0f172a] p-4 flex flex-col gap-3 rounded-xl overflow-hidden border border-white/10 relative font-sans shadow-2xl">
       {/* Header */}
       <div className="flex items-center gap-2 pb-2 border-b border-white/5">
         <div className="w-2 h-2 rounded-full bg-red-500/50"></div>
@@ -46,7 +46,7 @@ const ChatMockup = () => {
 }
 
 const AnalysisMockup = () => (
-  <div className="w-full h-full bg-white/95 p-4 flex flex-col items-center justify-center relative rounded-xl overflow-hidden border border-white/20">
+  <div className="w-full h-full bg-white/95 p-4 flex flex-col items-center justify-center relative rounded-xl overflow-hidden border border-white/20 shadow-2xl">
      {/* Scanning Line */}
      <div className="absolute inset-0 bg-linear-to-b from-transparent via-blue-400/10 to-transparent animate-scan z-10"></div>
      
@@ -80,7 +80,7 @@ const AnalysisMockup = () => (
 )
 
 const PlanetaryMockup = () => (
-  <div className="w-full h-full bg-[#0f172a] flex items-center justify-center relative rounded-xl overflow-hidden border border-white/10">
+  <div className="w-full h-full bg-[#0f172a] flex items-center justify-center relative rounded-xl overflow-hidden border border-white/10 shadow-2xl">
     <div className="absolute w-[140%] h-[140%] bg-blue-500/5 rounded-full blur-xl"></div>
     
     <div className="absolute w-32 h-32 border border-blue-500/20 rounded-full animate-spin-slow"></div>
@@ -100,7 +100,7 @@ const PlanetaryMockup = () => (
 )
 
 const ItineraryMockup = () => (
-  <div className="w-full h-full bg-white p-4 flex flex-col rounded-xl overflow-hidden shadow-lg border border-gray-100 relative">
+  <div className="w-full h-full bg-white p-4 flex flex-col rounded-xl overflow-hidden shadow-2xl border border-gray-100 relative">
     <div className="absolute top-0 left-0 w-full h-1 bg-linear-to-r from-orange-400 to-orange-600"></div>
     
     <div className="mt-2 flex items-center justify-between mb-6">
@@ -156,42 +156,91 @@ const steps = [
 
 export default function HowItWorks() {
   return (
-    <div className="w-full py-16 px-4 relative z-10">
-        <div className="max-w-6xl mx-auto">
+    <div className="w-full py-4 px-4 relative z-10 overflow-hidden">
+        <div className="max-w-6xl mx-auto relative">
+            {/* Header */}
             <div className="text-center mb-12">
                 <span className="px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-400 text-xs font-semibold tracking-wider uppercase mb-4 inline-block">
                     Simple Process
                 </span>
-                <h2 className="text-3xl md:text-4xl font-bold text-white mb-4 drop-shadow-lg">
+                <h2 className="text-3xl md:text-5xl font-bold text-white mb-6 drop-shadow-lg">
                     How It Works
                 </h2>
-                <p className="text-gray-400 text-sm md:text-base max-w-xl mx-auto">
+                <p className="text-gray-400 text-base md:text-lg max-w-2xl mx-auto">
                     From conversation to your dream vacation in four easy steps.
                 </p>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 relative">
-                {steps.map((step, idx) => (
-                    <div key={idx} className="group relative">
-                        <div className="bg-white/5 backdrop-blur-md rounded-2xl p-3 border border-white/10 hover:border-orange-500/30 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-orange-500/5 h-full flex flex-col">
-                            
-                            {/* Live UI Mockup Container */}
-                            <div className="relative w-full aspect-9/12 rounded-xl overflow-hidden mb-4 bg-gray-900/50 border border-white/5 group-hover:border-white/10 transition-colors">
-                                {step.component}
+            {/* Desktop Center Line */}
+            <div className="hidden md:block absolute left-1/2 top-70 bottom-0 w-px bg-linear-to-b from-orange-500/50 via-orange-500/20 to-transparent -translate-x-1/2 h-[calc(100%-17rem)] z-0"></div>
+
+            {/* Steps */}
+            <div className="space-y-8 md:space-y-0 relative z-10">
+                {steps.map((step, idx) => {
+                    const isEven = idx % 2 !== 0;
+                    
+                    return (
+                        <div key={idx} className="md:py-4">
+                            {/* Desktop View */}
+                            <div className="hidden md:grid md:grid-cols-[1fr_auto_1fr] gap-12 items-center">
+                                {/* Left Column */}
+                                <div className={`flex justify-end ${!isEven ? 'opacity-100 translate-x-0' : 'invisible'}`}>
+                                    {!isEven && (
+                                        <div className="flex items-center gap-8">
+                                             {/* Content - Inner Right */}
+                                             <div className="flex items-center gap-6 text-right">
+                                                <div className="flex flex-col items-end">
+                                                    <h3 className="text-2xl font-bold text-white mb-3 leading-tight">{step.title}</h3>
+                                                    <p className="text-gray-400 max-w-[200px] leading-relaxed text-sm">{step.desc}</p>
+                                                </div>
+                                                <div className="w-64 aspect-video rounded-xl overflow-hidden border border-white/10 shadow-2xl transition-transform hover:scale-105 duration-300 shrink-0">
+                                                    {step.component}
+                                                </div>
+                                             </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Center Dot */}
+                                <div className="relative flex justify-center h-full items-center">
+                                    <div className="w-4 h-4 rounded-full bg-orange-200 border-2 border-orange-300 shadow-[0_0_15px_rgba(249,115,22,0.8)] z-10"></div>
+                                </div>
+
+                                {/* Right Column */}
+                                <div className={`flex justify-start ${isEven ? 'opacity-100 translate-x-0' : 'invisible'}`}>
+                                    {isEven && (
+                                        <div className="flex items-center gap-8">
+                                            {/* Content - Inner Left */}
+                                            <div className="flex items-center gap-6 text-left">
+                                                <div className="w-64 aspect-video rounded-xl overflow-hidden border border-white/10 shadow-2xl transition-transform hover:scale-105 duration-300 shrink-0">
+                                                    {step.component}
+                                                </div>
+                                                <div className="flex flex-col items-start">
+                                                    <h3 className="text-2xl font-bold text-white mb-3 leading-tight">{step.title}</h3>
+                                                    <p className="text-gray-400 max-w-[200px] leading-relaxed text-sm">{step.desc}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
 
-                            {/* Text Content */}
-                            <div className="text-center relative z-10 mt-auto">
-                                <h3 className="text-sm md:text-base font-bold text-white mb-1 group-hover:text-orange-400 transition-colors">
-                                    {step.title}
-                                </h3>
-                                <p className="text-xs text-gray-400 leading-relaxed px-1">
-                                    {step.desc}
-                                </p>
+                            {/* Mobile View */}
+                            <div className="flex md:hidden pl-6 relative pb-8 border-l border-orange-500/20 ml-4">
+                                {/* Simple Dot for Mobile instead of Number */}
+                                <div className="absolute -left-[6.5px] top-0 w-3 h-3 rounded-full bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.8)] z-10"></div>
+                                
+                                <div className="pl-6">
+                                    <h3 className="text-xl font-bold text-white mb-2">{step.title}</h3>
+                                    <p className="text-gray-400 mb-4 text-sm leading-relaxed">{step.desc}</p>
+                                    <div className="w-full aspect-video rounded-xl overflow-hidden border border-white/10 shadow-lg">
+                                        {step.component}
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
         </div>
     </div>

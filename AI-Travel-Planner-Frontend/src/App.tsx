@@ -3,6 +3,7 @@ import Header from './header/Header'
 import LandingPage from './pages/LandingPage'
 import ChatPage from './pages/ChatPage'
 import TestPage from './test/TestPage'
+import FlightPage from './pages/FlightPage'
 import LiveBackground from './component/background/LiveBackground'
 
 
@@ -11,6 +12,12 @@ function App() {
     <Router>
       <Routes>
         <Route path="/test" element={<TestPage />} />
+        <Route path="/flight" element={
+          <LiveBackground fixed={true}>
+            <Header />
+            <FlightPage />
+          </LiveBackground>
+        } />
         <Route path="/" element={
           <LiveBackground>
             <Header />

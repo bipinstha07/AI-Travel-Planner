@@ -800,7 +800,7 @@ function ItineraryView({ itinerary, isRightPanelExpanded }: ItineraryViewProps) 
       </div>
 
       {/* Days */}
-      {itinerary.days.map((day, dayIndex) => {
+      {itinerary.days && Array.isArray(itinerary.days) && itinerary.days.map((day, dayIndex) => {
         const dayTitle = day.day ? day.day.replace(/^#+\s*/, '').replace(/\*\*/g, '').trim() : ''
         
         let descriptionToRender = day.description || ''

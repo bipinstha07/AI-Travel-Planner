@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.554.0",
     "react": "^19.1.1",
