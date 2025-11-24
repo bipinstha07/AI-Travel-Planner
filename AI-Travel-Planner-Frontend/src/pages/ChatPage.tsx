@@ -12,6 +12,7 @@ import TripDesigner from '../component/chat/TripDesigner'
 
 // Environment variable for Gemini API Key
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || '';
+const PYTHON_URL = import.meta.env.VITE_PYTHON_URL || '';
 
 // Initialize Gemini Client
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
@@ -714,7 +715,7 @@ function ChatPage() {
     // Or if the backend is not set up to receive it, we might have issues.
     // Assuming we still call the existing endpoint for now, but ideally this should be a POST with tripVariables
     
-    const apiCallPromise = fetch('http://127.0.0.1:8000/api/generate_itinerary', {
+    const apiCallPromise = fetch(`${PYTHON_URL}/api/generate_itinerary`, {
       method: 'POST', 
       headers: {
         'Content-Type': 'application/json',
