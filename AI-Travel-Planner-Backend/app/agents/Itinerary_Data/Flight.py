@@ -163,6 +163,8 @@ def get_flights(
     # -----------------------------------------
     # FINAL RESPONSE (same structure as before)
     # -----------------------------------------
+
+    
     final_response = {
         "search_metadata": final_results.get("search_metadata", {}),
         "search_parameters": final_results.get("search_parameters", {}),
@@ -186,5 +188,7 @@ def get_flights(
         "arrival_place": arr_info.get("place_coordinates"),
         "arrival_airport": arr_info.get("airport_coordinates")
     }
+
+    
 
     return final_response

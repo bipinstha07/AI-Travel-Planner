@@ -15,7 +15,7 @@ const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || '';
 
 // Initialize Gemini Client
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
+const model = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" });
 
 function ChatPage() {
   const location = useLocation()
@@ -64,6 +64,21 @@ function ChatPage() {
     }
   }, [currentProcessingStep, isLoadingItinerary])
   
+  // Safety check: Monitor tripVariables and force isDone if all fields are filled
+  useEffect(() => {
+    if (
+      tripVariables.destination &&
+      tripVariables.departure_city &&
+      tripVariables.start_date &&
+      tripVariables.num_days &&
+      tripVariables.budget &&
+      tripVariables.trip_type
+    ) {
+      // Only set true if not already true to avoid loops (though React handles this)
+      if (!isDone) setIsDone(true);
+    }
+  }, [tripVariables, isDone])
+
   // Focus input after message is sent
   useEffect(() => {
     if (!isLoading) {
@@ -81,6 +96,15 @@ function ChatPage() {
 
     const today = new Date().toISOString().split('T')[0];
 
+    // Determine missing fields to guide the AI
+    const missingFields = [];
+    if (!currentVars.destination) missingFields.push("Destination");
+    if (!currentVars.departure_city) missingFields.push("Departure City");
+    if (!currentVars.start_date) missingFields.push("Start Date");
+    if (!currentVars.num_days) missingFields.push("Number of Days");
+    if (!currentVars.budget) missingFields.push("Budget");
+    if (!currentVars.trip_type) missingFields.push("Trip Type");
+
     const prompt = `
       You are an AI travel planner assistant. Your goal is to collect specific trip details from the user to plan a perfect trip.
       
@@ -97,28 +121,71 @@ function ChatPage() {
       CURRENT COLLECTED INFORMATION:
       ${JSON.stringify(currentVars)}
 
+      MISSING FIELDS (ASK FOR ONE OF THESE ONLY):
+      ${JSON.stringify(missingFields)}
+
       LAST AI MESSAGE: ${JSON.stringify(lastAiMessage)}
       USER'S LATEST MESSAGE: ${JSON.stringify(userMessage)}
 
-      CRITICAL INSTRUCTION - READ THIS FIRST:
-      - Look at "CURRENT COLLECTED INFORMATION" above.
-      - DO NOT ask for a field that is already NOT NULL in "CURRENT COLLECTED INFORMATION".
-      - If "destination" is NULL, the user's message is likely the destination (unless they are asking for suggestions).
-      - If "destination" is SET, but "departure_city" is NULL, the user's message IS the departure city.
-      - NEVER ask for the same field twice. If a field is not null, move to the next one.
+      - If user ask suggestion give suggestion as per question.
+      - if user greets by hi hello how are you or any other greeting say hi back and ask what they want to plan.
 
-      STRICT VARIABLE UPDATE LOGIC:
-      - If (destination == null), set "destination" = "${userMessage}" (unless user is asking for ideas).
-      - If (destination != null) AND (departure_city == null), set "departure_city" = "${userMessage}".
-      - If (destination != null) AND (departure_city != null) AND (start_date == null), set "start_date" = "${userMessage}".
-      - If (destination != null) AND (departure_city != null) AND (start_date != null) AND (num_days == null), set "num_days" = "${userMessage}".
-      - If (destination != null) AND (departure_city != null) AND (start_date != null) AND (num_days != null) AND (budget == null), set "budget" = "${userMessage}".
-      - If (destination != null) AND (departure_city != null) AND (start_date != null) AND (num_days != null) AND (budget != null) AND (trip_type == null), set "trip_type" = "${userMessage}".
-      - If (destination != null) AND (departure_city != null) AND (start_date != null) AND (num_days != null) AND (budget != null) AND (trip_type != null), set "done" = true.
+      CRITICAL INSTRUCTION - READ THIS FIRST:
+      - You are a smart travel assistant.
+      - Your goal is ONLY to collect the 6 required variables.
+      - CHECK "MISSING FIELDS" LIST ABOVE.
+      - IF the "USER'S LATEST MESSAGE" answers a missing field, UPDATE IT.
+      - AFTER updating, check if any fields are still missing.
+      - IF ALL 6 VARIABLES ARE COLLECTED (Destination, Departure City, Start Date, Num Days, Budget, Trip Type), YOU MUST SET "done" = true.
+      - DO NOT ask for a field if you just extracted it.
+      - DO NOT ask for "places to explore", "attractions", "specific dates" (unless missing), or "confirmation".
+
+      PHASE 1: PARSING (UPDATE VARIABLES):
+      - LOOK at "LAST AI MESSAGE". What did you ask for?
+        - If you asked for **Destination**, set "destination" = "${userMessage}".
+        - If you asked for **Departure/Flying from**, set "departure_city" = "${userMessage}".
+        - If you asked for **Start Date/When**, set "start_date" = (CONVERT "${userMessage}" TO YYYY-MM-DD).
+        - If you asked for **Duration/Days/How long**, set "num_days" = "${userMessage}".
+        - If you asked for **Budget**, set "budget" = "${userMessage}".
+        - If you asked for **Trip Type/Style**, set "trip_type" = "${userMessage}".
+      
+      PHASE 2: INFERENCE (FILL GAPS):
+      - If the user's message clearly contains a **City/Country** and "destination" is NULL, set "destination" = "${userMessage}".
+      - If the user's message clearly contains a **Date** and "start_date" is NULL, set "start_date" = (CONVERT "${userMessage}" TO YYYY-MM-DD).
+      - If the user's message clearly contains a **Duration** (e.g. "7 days") and "num_days" is NULL, set "num_days" = "${userMessage}".
+      
+      PHASE 3: NEXT STEP (WHAT TO ASK):
+      - Check the collected variables in this order:
+        1. Destination
+        2. Departure City
+        3. Start Date
+        4. Number of Days
+        5. Budget
+        6. Trip Type
+      - If a variable is NULL, ask for it.
+      - If all are NOT NULL, set "done" = true.
+
+      NEGATIVE CONSTRAINTS (DO NOT DO THIS):
+      - DO NOT ask for "places to visit" or "things to do".
+      - DO NOT ask for "specific dates" if a month/year is given (unless you need it for booking, but here just accept the text).
+      - DO NOT ask for "confirmation" or "is this correct?".
+      - DO NOT provide a summary unless "done" is true.
+
+      CRITICAL TRIP TYPE vs BUDGET RULE:
+      - If the user's message is a budget (e.g. "Low", "Medium", "High", "$1000", "Cheap", "Expensive"), DO NOT set it as "trip_type". 
+      - If "budget" is already collected and the user says "Low" or "Medium" again, ask them to clarify the trip type (Leisure, Adventure, etc.) instead of updating "trip_type" with a budget value.
+      - "trip_type" MUST be one of: Leisure, Adventure, Family, Romantic, Business, Solo, or similar travel styles. It CANNOT be a price or cost.
+
+      ANTI-LOOPING RULES:
+      - If "budget" is already in CURRENT COLLECTED INFORMATION, DO NOT ask for budget.
+      - If "trip_type" is already in CURRENT COLLECTED INFORMATION, DO NOT ask for trip_type.
+      - If you just updated the LAST missing variable (trip_type), YOU MUST set "done" = true and output the completion message.
 
       GENERAL RULES:
       - Keep responses short, friendly, and warm.
       - Ask only ONE missing detail at a time.
+      - Don't accept general places like national parks, islands, etc. Ask for specific cities or countries or national parks.
+      - If user ask suggestion give suggestion as per question.
       - Never modify an existing field unless user explicitly says to change it.
       - ALWAYS provide 3-4 relevant suggestions for the specific question you are asking (e.g., if asking for destination, suggest cities; if asking for budget, suggest ranges).
       - If you are asking for "trip type", provide suggestions like: Leisure, Adventure, Family, Romantic, Business.
@@ -136,15 +203,28 @@ function ChatPage() {
 
       DATE HANDLING:
       - Today is ${today}.
-      - Convert terms like "tomorrow", "next week" to YYYY-MM-DD format for variables.
-      - Dates must be in the future.
-      - IMPORTANT: The "start_date" variable in the JSON output MUST ALWAYS be in ISO 8601 format (YYYY-MM-DD). Never use natural language for the start_date variable.
+      - STRICT POLICY: "start_date" MUST ALWAYS BE ISO 8601 (YYYY-MM-DD).
+      - IF user says "20 december", infer the year (future) and output "YYYY-12-20".
+      - IF user says "next week", calculate the specific date.
+      - IF user says "tomorrow", calculate the specific date.
+      - NEVER output natural language like "December 20th" or "Next Friday" for "start_date".
+      - If year is implied, assume the next occurrence in the future.
 
       COMPLETION:
       - If all 6 pieces of information (destination, departure_city, start_date, num_days, trip_type, budget) are collected, set "done" to true.
       - DO NOT ask any further questions.
       - DO NOT ask for confirmation.
       - Reply ONLY with: "Great! I have all the details. Please click on 'Create Itinerary' to generate your personalized travel plan."
+     
+      - Example: 
+      User: Hi, I want to plan a trip to some desert places.
+      AI: Hi! Ready to plan your next adventure? Where would you like to go? suggestions: Dubai, Abu Dhabi, Oman, Saudi Arabia, etc.
+      User: Dubai
+      AI: When are you planning to go?
+      .......
+
+      Strict Rules:
+      - Always provide suggestions for the question you are asking.
 
       RETURN FORMAT:
       Return ONLY a valid JSON object with this exact structure (no markdown formatting):
@@ -251,38 +331,66 @@ function ChatPage() {
       // Update API suggestions
       setApiSuggestions(data.suggestions || [])
       
+      // Update trip variables from response
+      let finalDone = data.done;
+
+      if (data.variables) {
+        console.log('Trip Variables Update:', data.variables); // Log variables for debugging
+        
+        // Calculate new variables state locally to check for completion
+        const newVars = { ...tripVariables };
+        Object.entries(data.variables).forEach(([key, value]) => {
+          if (value !== null && value !== undefined && value !== "") {
+            // @ts-ignore
+            newVars[key] = value;
+          }
+        });
+
+        console.log('New Trip Variables State:', newVars);
+
+        // Check if all variables are now filled
+        // Double verification
+        const isDestinationFilled = !!newVars.destination;
+        const isDepartureFilled = !!newVars.departure_city;
+        const isStartDateFilled = !!newVars.start_date;
+        const isNumDaysFilled = !!newVars.num_days;
+        const isBudgetFilled = !!newVars.budget;
+        const isTripTypeFilled = !!newVars.trip_type;
+
+        if (
+          isDestinationFilled && 
+          isDepartureFilled && 
+          isStartDateFilled && 
+          isNumDaysFilled && 
+          isBudgetFilled && 
+          isTripTypeFilled
+        ) {
+          finalDone = true;
+        }
+
+        // Merge with existing variables to ensure we don't lose anything if AI returns null for known vars
+        setTripVariables(newVars)
+      }
+      
+      // Update done status with the locally calculated completion status
+      setIsDone(finalDone)
+      
+      // Only update suggestions if not done
+      if (!finalDone) {
+        setApiSuggestions(data.suggestions || [])
+      } else {
+        setApiSuggestions([])
+      }
+      
       // Add AI response to chat
       const aiMessage: Message = {
         id: Date.now() + 1,
-        text: data.reply,
+        text: finalDone ? "Great! I have all the details. Please click on 'Create Itinerary' to generate your personalized travel plan." : data.reply,
         isUser: false,
         timestamp: new Date()
       }
       
       setMessages(prev => [...prev, aiMessage])
-      
-      // Update trip variables from response
-      if (data.variables) {
-        console.log('Trip Variables Update:', data.variables); // Log variables for debugging
-        // Merge with existing variables to ensure we don't lose anything if AI returns null for known vars
-        setTripVariables(prev => {
-          const newVars = { ...prev };
-          
-          // Only update fields that are NOT null in the incoming data
-          Object.entries(data.variables).forEach(([key, value]) => {
-            if (value !== null && value !== undefined && value !== "") {
-              // @ts-ignore - key is keyof ChatResponse['variables']
-              newVars[key] = value;
-            }
-          });
-          
-          console.log('New Trip Variables State:', newVars);
-          return newVars;
-        })
-      }
-      
-      // Update done status
-      setIsDone(data.done)
       
     } catch (err) {
       console.error('Error calling chat API:', err)

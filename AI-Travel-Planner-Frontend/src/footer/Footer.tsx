@@ -1,19 +1,15 @@
+import { Link } from 'react-router-dom'
+
 export default function Footer() {
   return (
-    <footer className="w-full border-t border-white/20 bg-[#051e3e]/80 backdrop-blur-xl relative z-20 mt-auto shadow-2xl">
+    <footer className="w-full border-t border-white/20 bg-[#051e3e]/80 backdrop-blur-xl relative z-20 mt-6 shadow-2xl">
       <div className="max-w-7xl mx-auto px-6 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
           {/* Brand */}
           <div className="col-span-1 md:col-span-1">
             <div className="flex items-center gap-2 mb-4">
-              <div className="text-orange-500">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" strokeWidth="2"/>
-                  <path d="M2 12H22" stroke="currentColor" strokeWidth="2"/>
-                  <path d="M12 2C14.5013 4.73835 15.9228 8.29203 16 12C15.9228 15.708 14.5013 19.2616 12 22C9.49872 19.2616 8.07725 15.708 8 12C8.07725 8.29203 9.49872 4.73835 12 2Z" stroke="currentColor" strokeWidth="2"/>
-                </svg>
-              </div>
-              <span className="text-xl font-bold text-white">Voyage.ai</span>
+              <img src="/logo.png" alt="Travel.AI" className="w-10 h-10" />
+              <span className="text-xl font-bold text-orange-500">Travel.AI</span>
             </div>
             <p className="text-gray-300 text-sm leading-relaxed font-medium">
               Your personal AI travel companion. Plan, track, and organize your perfect journey with intelligent recommendations.
@@ -24,36 +20,36 @@ export default function Footer() {
           <div>
             <h3 className="text-white font-bold text-lg mb-4">Product</h3>
             <ul className="space-y-3 text-sm text-gray-300">
-              <li><a href="#" className="hover:text-orange-400 transition-colors font-medium">Features</a></li>
-              <li><a href="#" className="hover:text-orange-400 transition-colors font-medium">Pricing</a></li>
-              <li><a href="#" className="hover:text-orange-400 transition-colors font-medium">Destinations</a></li>
-              <li><a href="#" className="hover:text-orange-400 transition-colors font-medium">Reviews</a></li>
+              <li><Link to="/features" className="hover:text-orange-400 transition-colors font-medium">Features</Link></li>
+              <li><Link to="/pricing" className="hover:text-orange-400 transition-colors font-medium">Pricing</Link></li>
+              <li><Link to="/destinations" className="hover:text-orange-400 transition-colors font-medium">Destinations</Link></li>
+              <li><Link to="/reviews" className="hover:text-orange-400 transition-colors font-medium">Reviews</Link></li>
             </ul>
           </div>
 
           <div>
             <h3 className="text-white font-bold text-lg mb-4">Company</h3>
             <ul className="space-y-3 text-sm text-gray-300">
-              <li><a href="#" className="hover:text-orange-400 transition-colors font-medium">About</a></li>
-              <li><a href="#" className="hover:text-orange-400 transition-colors font-medium">Careers</a></li>
-              <li><a href="#" className="hover:text-orange-400 transition-colors font-medium">Blog</a></li>
-              <li><a href="#" className="hover:text-orange-400 transition-colors font-medium">Contact</a></li>
+              <li><Link to="/about" className="hover:text-orange-400 transition-colors font-medium">About</Link></li>
+              <li><Link to="/careers" className="hover:text-orange-400 transition-colors font-medium">Careers</Link></li>
+              <li><Link to="/blog" className="hover:text-orange-400 transition-colors font-medium">Blog</Link></li>
+              <li><Link to="/contact" className="hover:text-orange-400 transition-colors font-medium">Contact</Link></li>
             </ul>
           </div>
 
           <div>
             <h3 className="text-white font-bold text-lg mb-4">Legal</h3>
             <ul className="space-y-3 text-sm text-gray-300">
-              <li><a href="#" className="hover:text-orange-400 transition-colors font-medium">Privacy Policy</a></li>
-              <li><a href="#" className="hover:text-orange-400 transition-colors font-medium">Terms of Service</a></li>
-              <li><a href="#" className="hover:text-orange-400 transition-colors font-medium">Cookie Policy</a></li>
+              <li><Link to="/privacy" className="hover:text-orange-400 transition-colors font-medium">Privacy Policy</Link></li>
+              <li><Link to="/terms" className="hover:text-orange-400 transition-colors font-medium">Terms of Service</Link></li>
+              <li><Link to="/cookies" className="hover:text-orange-400 transition-colors font-medium">Cookie Policy</Link></li>
             </ul>
           </div>
         </div>
 
         <div className="border-t border-white/20 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-gray-300 text-sm text-center md:text-left font-medium">
-            © 2025 Voyage.ai. All rights reserved.
+            © 2025 Travel.AI. All rights reserved.
           </p>
           <div className="flex items-center gap-4">
             {/* Social Icons */}

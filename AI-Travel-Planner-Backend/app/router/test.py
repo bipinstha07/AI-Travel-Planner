@@ -9,7 +9,7 @@ router = APIRouter()
 
 @router.post("/airports")
 async def get_airports(request: Request):
-    data = await request.json()
+    data = await request.json() 
     search = data.get("search")
     result = resolve_airport_code(search)
     return result
@@ -17,6 +17,9 @@ async def get_airports(request: Request):
 @router.post("/flight")
 async def get_flight(request: Request):
     data = await request.json()
+    print("------------------Flight Request--------------")
+    print(data)
+    print("------------------Flight Request--------------")
     departure_id = data.get("departure_id")
     arrival_id = data.get("arrival_id")
     outbound_date = data.get("outbound_date")
@@ -24,4 +27,10 @@ async def get_flight(request: Request):
     currency = data.get("currency")
    
     result = get_flights(departure_id, arrival_id, outbound_date, return_date, currency)
+    print("------------------Flight Result--------------")
+    print(result)
+    print("------------------Flight Result--------------")
     return result
+
+
+   

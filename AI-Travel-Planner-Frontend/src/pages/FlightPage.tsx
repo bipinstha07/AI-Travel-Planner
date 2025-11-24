@@ -182,19 +182,25 @@ function ChangeView({ center, zoom }: { center: [number, number]; zoom: number }
 }
 
 export default function FlightPage() {
+  const getFutureDate = (daysToAdd: number) => {
+    const date = new Date();
+    date.setDate(date.getDate() + daysToAdd);
+    return date.toISOString().split('T')[0];
+  };
+
   const [flightForm, setFlightForm] = useState<FlightSearchPayload>({
-    departure_id: "KTM",
-    arrival_id: "PEK",
-    outbound_date: "2025-11-12",
-    return_date: "2025-11-18",
+    departure_id: "",
+    arrival_id: "",
+    outbound_date: getFutureDate(1), // Tomorrow
+    return_date: getFutureDate(15), // 14 days after tomorrow
     currency: "USD",
     hl: "en",
   });
   
   // Additional UI state to match the screenshot design
-  const [tripType, setTripType] = useState("Round trip");
-  const [passengers, setPassengers] = useState(1);
-  const [cabinClass, setCabinClass] = useState("Economy");
+  const [tripType] = useState("Round trip");
+  const [passengers] = useState(1);
+  const [cabinClass] = useState("Economy");
 
   const [flightResponse, setFlightResponse] = useState<FlightApiResponse | null>(null);
   const [flightLoading, setFlightLoading] = useState(false);
@@ -312,7 +318,7 @@ export default function FlightPage() {
     return (
       <div
         key={idx}
-        className="border-b border-white/5 last:border-0 bg-transparent overflow-hidden transition-colors hover:bg-white/5"
+        className="border border-white/10 rounded-lg bg-white/2 overflow-hidden transition-colors hover:bg-white/5"
       >
         {/* Collapsed row - clickable */}
         <div
@@ -518,7 +524,7 @@ export default function FlightPage() {
     return (
       <div
         key={flight.rank}
-        className="border-b border-white/5 last:border-0 bg-transparent overflow-hidden transition-colors hover:bg-white/5"
+        className="border border-white/10 rounded-lg bg-white/2 overflow-hidden transition-colors hover:bg-white/5"
       >
         {/* Collapsed row - clickable */}
         <div
@@ -628,14 +634,14 @@ export default function FlightPage() {
   };
 
   return (
-    <div className="bg-transparent text-zinc-100 p-6 pt-24 font-chat selection:bg-white/20">
-      <div className="max-w-5xl mx-auto space-y-12">
+    <div className="bg-transparent text-zinc-100 font-chat selection:bg-white/20 h-screen overflow-y-auto custom-scrollbar">
+      <div className="max-w-5xl mx-auto space-y-12 p-6 pt-24">
         {/* Search Card */}
-        <div className="relative z-10 bg-slate-800/80 backdrop-blur-xl rounded-xl p-6 shadow-2xl border border-white/10">
+        <div className="relative z-10 bg-slate-800/20 backdrop-blur-xl rounded-xl p-6 shadow-2xl border border-white/10">
             <div className="absolute -top-12 left-0 flex gap-4 mb-4">
                 {/* Top Dropdowns (Visual Only) */}
                 <div className="relative group">
-                    <button className="flex items-center gap-2 text-sm font-medium text-gray-300 hover:text-white transition-colors bg-white/5 px-3 py-1.5 rounded-md hover:bg-white/10">
+                    <button className="flex items-center gap-2 text-sm font-medium text-white transition-colors bg-white/5 px-3 py-1.5 rounded-md hover:bg-white/10">
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
                         {tripType}
                         <svg className="w-3 h-3 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
@@ -643,14 +649,14 @@ export default function FlightPage() {
                     {/* Dropdown Content (Hidden) */}
                 </div>
                 <div className="relative group">
-                    <button className="flex items-center gap-2 text-sm font-medium text-gray-300 hover:text-white transition-colors bg-white/5 px-3 py-1.5 rounded-md hover:bg-white/10">
+                    <button className="flex items-center gap-2 text-sm font-medium text-white transition-colors bg-white/5 px-3 py-1.5 rounded-md hover:bg-white/10">
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                         {passengers}
                         <svg className="w-3 h-3 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                     </button>
                 </div>
                 <div className="relative group">
-                    <button className="flex items-center gap-2 text-sm font-medium text-gray-300 hover:text-white transition-colors bg-white/5 px-3 py-1.5 rounded-md hover:bg-white/10">
+                    <button className="flex items-center gap-2 text-sm font-medium text-white transition-colors bg-white/5 px-3 py-1.5 rounded-md hover:bg-white/10">
                         {cabinClass}
                         <svg className="w-3 h-3 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                     </button>
@@ -660,9 +666,9 @@ export default function FlightPage() {
             <form onSubmit={handleFlightSubmit} className="relative">
                 <div className="grid grid-cols-1 md:grid-cols-[1.5fr_1fr] gap-2">
                     {/* Origin - Swap - Destination Group */}
-                    <div className="flex items-center relative bg-white/5 rounded-md border border-white/10 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all">
+                    <div className="flex items-center relative bg-white/5 rounded-md border border-white/10 transition-all">
                         {/* Origin */}
-                        <div className="flex-1 relative group">
+                        <div className="flex-1 relative group rounded-l-md focus-within:bg-white/10 focus-within:ring-1 focus-within:ring-blue-500 focus-within:z-20">
                             <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                             </div>
@@ -671,13 +677,13 @@ export default function FlightPage() {
                                 value={flightForm.departure_id}
                                 onChange={(e) => handleFlightChange("departure_id", e.target.value)}
                                 required
-                                className="w-full bg-transparent border-none py-3.5 pl-10 pr-8 text-white focus:ring-0 placeholder-gray-500"
+                                className="w-full bg-transparent border-none py-3.5 pl-10 pr-8 text-white focus:outline-none focus:ring-0 placeholder-gray-500 rounded-l-md"
                                 placeholder="Where from?"
                             />
                         </div>
 
                         {/* Swap Button */}
-                        <div className="relative z-10 -ml-3 -mr-3">
+                        <div className="relative z-30 -ml-3 -mr-3">
                              <button 
                                 type="button"
                                 onClick={handleSwapAirports}
@@ -688,7 +694,7 @@ export default function FlightPage() {
                         </div>
 
                         {/* Destination */}
-                        <div className="flex-1 relative border-l border-white/5">
+                        <div className="flex-1 relative border-l border-white/5 rounded-r-md focus-within:bg-white/10 focus-within:ring-1 focus-within:ring-orange-500 focus-within:z-20">
                             <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                             </div>
@@ -697,15 +703,15 @@ export default function FlightPage() {
                                 value={flightForm.arrival_id}
                                 onChange={(e) => handleFlightChange("arrival_id", e.target.value)}
                                 required
-                                className="w-full bg-transparent border-none py-3.5 pl-10 pr-4 text-white focus:ring-0 placeholder-gray-500"
+                                className="w-full bg-transparent border-none py-3.5 pl-10 pr-4 text-white focus:outline-none focus:ring-0 placeholder-gray-500 rounded-r-md"
                                 placeholder="Where to?"
                             />
                         </div>
                     </div>
 
                     {/* Dates Group */}
-                    <div className="flex items-center bg-white/5 rounded-md border border-white/10 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all">
-                         <div className="flex-1 relative border-r border-white/5">
+                    <div className="flex items-center bg-white/5 rounded-md border border-white/10 transition-all">
+                         <div className="flex-1 relative border-r border-white/5 rounded-l-md focus-within:bg-white/10 focus-within:ring-2 focus-within:ring-blue-500 focus-within:z-20">
                              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                              </div>
@@ -714,10 +720,10 @@ export default function FlightPage() {
                                 value={flightForm.outbound_date}
                                 onChange={(e) => handleFlightChange("outbound_date", e.target.value)}
                                 required
-                                className="w-full bg-transparent border-none py-3.5 pl-10 pr-2 text-white focus:ring-0 placeholder-gray-500 appearance-none [&::-webkit-calendar-picker-indicator]:invert"
+                                className="w-full bg-transparent border-none py-3.5 pl-10 pr-2 text-white focus:outline-none focus:ring-0 placeholder-gray-500 appearance-none [&::-webkit-calendar-picker-indicator]:invert rounded-l-md"
                             />
                          </div>
-                         <div className="flex-1 relative">
+                         <div className="flex-1 relative rounded-r-md focus-within:bg-white/10 focus-within:ring-2 focus-within:ring-blue-500 focus-within:z-20">
                             <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                             </div>
@@ -726,7 +732,7 @@ export default function FlightPage() {
                                 value={flightForm.return_date}
                                 onChange={(e) => handleFlightChange("return_date", e.target.value)}
                                 required
-                                className="w-full bg-transparent border-none py-3.5 pl-10 pr-2 text-white focus:ring-0 placeholder-gray-500 appearance-none [&::-webkit-calendar-picker-indicator]:invert"
+                                className="w-full bg-transparent border-none py-3.5 pl-10 pr-2 text-white focus:outline-none focus:ring-0 placeholder-gray-500 appearance-none [&::-webkit-calendar-picker-indicator]:invert rounded-r-md"
                             />
                          </div>
                     </div>
@@ -775,7 +781,7 @@ export default function FlightPage() {
               </div>
             </div>
 
-            <div className="border border-white/10 rounded-lg bg-white/2">
+            <div className="space-y-4">
             {(() => {
               const flightsToDisplay = 
                 (flightResponse.best_flights && flightResponse.best_flights.length > 0)
@@ -875,7 +881,7 @@ export default function FlightPage() {
                 const minZoom = 3;
 
                 return (
-                  <div className="h-[400px] w-full rounded-lg overflow-hidden border border-white/10 grayscale-[0.5]">
+                  <div className="h-[400px] w-full rounded-lg overflow-hidden border border-white/10">
                     <MapContainer
                       center={[centerLat, centerLon]}
                       zoom={zoom}
@@ -886,7 +892,7 @@ export default function FlightPage() {
                     >
                       <ChangeView center={[centerLat, centerLon]} zoom={zoom} />
                       <TileLayer
-                        url="https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png"
+                        url="https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png"
                         attribution='&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="http://cartodb.com/attributions">CartoDB</a>'
                         maxZoom={20}
                         noWrap={true}
@@ -1039,7 +1045,7 @@ export default function FlightPage() {
               const minZoom = 3;
 
               return (
-                <div className="h-[400px] w-full rounded-lg overflow-hidden border border-white/10 grayscale-[0.2]">
+                <div className="h-[400px] w-full rounded-lg overflow-hidden border border-white/10">
                   <MapContainer
                     center={[centerLat, centerLon]}
                     zoom={zoom}
@@ -1051,7 +1057,7 @@ export default function FlightPage() {
                   >
                     <ChangeView center={[centerLat, centerLon]} zoom={zoom} />
                     <TileLayer
-                      url="https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png"
+                      url="https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png"
                       attribution='&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="http://cartodb.com/attributions">CartoDB</a>'
                       maxZoom={20}
                       noWrap={true}
@@ -1106,11 +1112,11 @@ export default function FlightPage() {
                     {routePath.length > 0 && (
                       <Polyline
                         positions={routePath}
-                        pathOptions={{
-                          color: "#60a5fa", // lighter blue for dark map
-                          weight: 2,
-                          opacity: 0.8,
-                        }}
+                          pathOptions={{
+                            color: "#2563eb", // darker blue for light map
+                            weight: 2,
+                            opacity: 0.8,
+                          }}
                       />
                     )}
                     {arrivalConnectionPath.length > 0 && (

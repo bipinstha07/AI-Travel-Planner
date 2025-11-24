@@ -46,7 +46,7 @@ def get_hotels(destination: str, check_in: str, check_out: str, adults: int = 2,
                     "thumbnail": img.get("thumbnail"),
                     "original_image": img.get("original_image")
                 })
-
+ 
             # Extract main info
             hotel_info = {
                 "name": hotel.get("name"),

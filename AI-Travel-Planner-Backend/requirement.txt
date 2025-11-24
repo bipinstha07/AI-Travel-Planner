@@ -1,8 +1,27 @@
 fastapi
-uvicorn
-transformers
-torch
-huggingface_hub
-google-search-results>=2.4.2
-gradio>=4.31.0
+uvicorn[standard]
 python-dotenv
+
+# SerpAPI
+google-search-results
+
+# HuggingFace model calls (InferenceClient)
+huggingface_hub
+
+# Date/time utilities
+python-dateutil
+
+# HTTP client (optional but recommended)
+requests
+
+# CORS
+fastapi[all]
+
+# For JSON validation
+pydantic
+
+# If you're using asyncio in any part
+anyio
+
+# OPTIONAL — only if you used these in your code
+pytz
