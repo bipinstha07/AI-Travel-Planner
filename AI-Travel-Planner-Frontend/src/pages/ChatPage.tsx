@@ -16,7 +16,7 @@ const PYTHON_URL = import.meta.env.VITE_PYTHON_URL || '';
 
 // Initialize Gemini Client
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" });
+const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
 function ChatPage() {
   const location = useLocation()

@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import * as L from 'leaflet'
+import { useReactToPrint } from 'react-to-print'
 import type { ItineraryData, BestFlightOption } from '../../types/trave'
 import { formatDuration, formatDateTime, getDayOffsetSuffix } from '../../utils/dateUtils'
 
@@ -40,6 +41,29 @@ interface ItineraryViewProps {
 function ItineraryView({ itinerary, isRightPanelExpanded }: ItineraryViewProps) {
   const [expandedBest, setExpandedBest] = useState<Record<number, boolean>>({})
   const [showAllFlights, setShowAllFlights] = useState(false)
+  const [extraActivities, setExtraActivities] = useState<Record<number, string[]>>({})
+  const [newActivityInput, setNewActivityInput] = useState<Record<number, string>>({})
+  const [showActivityInput, setShowActivityInput] = useState<Record<number, boolean>>({})
+  const itineraryRef = useRef<HTMLDivElement>(null)
+
+  const handlePrint = useReactToPrint({
+    contentRef: itineraryRef,
+    documentTitle: `Trip to ${itinerary.destination}`,
+    
+  })
+
+  // Handle adding extra activity
+  const handleAddActivity = (dayIndex: number) => {
+    const activity = newActivityInput[dayIndex]?.trim()
+    if (activity) {
+      setExtraActivities(prev => ({
+        ...prev,
+        [dayIndex]: [...(prev[dayIndex] || []), activity]
+      }))
+      setNewActivityInput(prev => ({ ...prev, [dayIndex]: '' }))
+      setShowActivityInput(prev => ({ ...prev, [dayIndex]: false }))
+    }
+  }
 
   // Function to render markdown description with enhanced formatting (for structured itinerary)
   const renderItineraryMarkdown = (text: string) => {
@@ -454,9 +478,18 @@ function ItineraryView({ itinerary, isRightPanelExpanded }: ItineraryViewProps) 
   };
 
   return (
-    <div className="space-y-3 overflow-y-auto overflow-x-hidden max-h-[calc(90vh-60px)] w-full max-w-full">
+    <div ref={itineraryRef} className="space-y-3 overflow-y-auto overflow-x-hidden max-h-[calc(90vh-60px)] w-full max-w-full print:overflow-visible print:max-h-none print:h-auto">
       {/* Trip Header */}
-      <div className="bg-white rounded-2xl shadow-sm p-4">
+      <div className="bg-white rounded-2xl shadow-sm p-4 relative">
+        <button 
+            onClick={() => handlePrint()}
+            className="absolute top-4 right-4 p-2 rounded-full bg-gray-50 hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors print:hidden"
+            title="Download / Print Itinerary"
+        >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+            </svg>
+        </button>
         <div className="space-y-2">
           <div className="flex flex-col items-center gap-1.5">
             <div className="flex items-center gap-1.5 bg-white px-3 py-1 rounded-full border border-orange-200 shadow-sm">
@@ -840,6 +873,63 @@ function ItineraryView({ itinerary, isRightPanelExpanded }: ItineraryViewProps) 
               <div className="prose max-w-none">
                 {renderItineraryMarkdown(descriptionToRender)}
               </div>
+            )}
+
+            {/* Extra Activities List */}
+            {extraActivities[dayIndex] && extraActivities[dayIndex].length > 0 && (
+                <div className="mt-4 pt-4 border-t border-gray-100">
+                    <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                        <span className="text-amber-500">★</span> My Added Activities
+                    </h4>
+                    <ul className="space-y-2">
+                        {extraActivities[dayIndex].map((activity, idx) => (
+                            <li key={idx} className="text-sm text-gray-600 pl-4 border-l-2 border-amber-200 bg-amber-50/50 py-1 pr-2 rounded-r">
+                                {activity}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+
+            {/* Add Activity Section - Show for all days except the last one */}
+            {dayIndex !== (itinerary.days?.length || 0) - 1 && (
+                <div className="mt-4 flex flex-col gap-2">
+                    {!showActivityInput[dayIndex] ? (
+                        <button 
+                            onClick={() => setShowActivityInput(prev => ({ ...prev, [dayIndex]: true }))}
+                            className="self-start text-xs font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-3 py-1.5 rounded-md transition-colors flex items-center gap-1"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                                <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+                            </svg>
+                            Add Activity
+                        </button>
+                    ) : (
+                        <div className="flex items-center gap-2">
+                            <input 
+                                type="text" 
+                                value={newActivityInput[dayIndex] || ''}
+                                onChange={(e) => setNewActivityInput(prev => ({ ...prev, [dayIndex]: e.target.value }))}
+                                placeholder="Add a new activity..."
+                                className="flex-1 text-sm border border-gray-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                                autoFocus
+                                onKeyPress={(e) => e.key === 'Enter' && handleAddActivity(dayIndex)}
+                            />
+                            <button 
+                                onClick={() => handleAddActivity(dayIndex)}
+                                className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-3 py-1.5 rounded-md transition-colors"
+                            >
+                                Save
+                            </button>
+                            <button 
+                                onClick={() => setShowActivityInput(prev => ({ ...prev, [dayIndex]: false }))}
+                                className="text-gray-500 hover:text-gray-700 p-1.5"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                    )}
+                </div>
             )}
           </div>
         )

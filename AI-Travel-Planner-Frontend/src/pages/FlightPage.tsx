@@ -4,6 +4,9 @@ import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from "react-
 import "leaflet/dist/leaflet.css";
 import * as L from "leaflet";
 
+
+// Environment variable for Python URL
+const PYTHON_URL = import.meta.env.VITE_PYTHON_URL || '';
 // Fix for default marker icons in Leaflet with React
 // @ts-ignore
 delete L.Icon.Default.prototype._getIconUrl;
@@ -213,7 +216,7 @@ export default function FlightPage() {
     setFlightError(null);
 
     try {
-      const response = await fetch(`http://localhost:8000/api/flight`, {
+      const response = await fetch(`${PYTHON_URL}/api/flight`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
