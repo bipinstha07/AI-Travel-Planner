@@ -851,7 +851,7 @@ function ChatPage() {
           <button
             onClick={() => setIsRightPanelExpanded(!isRightPanelExpanded)}
             className={`absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 z-20 w-10 h-16 flex items-center justify-center bg-white/90 backdrop-blur-sm rounded-l-lg shadow-lg border border-gray-200/50 hover:bg-white transition-all duration-200 group ${
-              isRightPanelExpanded ? 'rotate-180' : ''
+              isRightPanelExpanded ? 'rotate-0' : 'rotate-180'
             }`}
             aria-label={isRightPanelExpanded ? 'Collapse panel' : 'Expand panel'}
             title={isRightPanelExpanded ? 'Collapse panel' : 'Expand panel'}
