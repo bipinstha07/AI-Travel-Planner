@@ -10,7 +10,7 @@ app = FastAPI(title="AI Travel Planner")
 origins = [
     "http://localhost:5173",  # your React dev server
     "http://127.0.0.1:5173",
-    "https://your-frontend-domain.com"  # production domain (optional)
+    "https://ai-travel-planner-delta-seven.vercel.app"  # production domain (optional)
 ]
 
 app.add_middleware(

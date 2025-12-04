@@ -1,4 +1,7 @@
 from fastapi import APIRouter, Request
+import re
+from datetime import datetime, date, timedelta
+import pytz
 
 from app.agents.itinerary_agent2 import ItineraryAgent2
 
@@ -31,6 +34,14 @@ async def generate_itinerary2(request: Request):
     trip_type = data.get("trip_type")
     """Generate full itinerary once details are collected."""
 
+    # Dallas timezone
+    dallas_tz = pytz.timezone("America/Chicago")
+
+    # Current time in Dallas
+    dallas_now = datetime.now(dallas_tz)
+
+    print("Current Dallas time:", dallas_now.strftime("%Y-%m-%d %H:%M:%S %Z"))
+
     print(
         "🧭 Itinerary Inputs:",
         destination, start_date, num_days, budget, departure_city, trip_type
@@ -39,7 +50,7 @@ async def generate_itinerary2(request: Request):
     # Clean up num_days to extract just the number
     if isinstance(num_days, str):
         # Extract number from strings like "5 days" or "8 days"
-        import re
+       
         match = re.search(r'\d+', num_days)
         if match:
             num_days = int(match.group())
@@ -55,7 +66,7 @@ async def generate_itinerary2(request: Request):
         if not re.match(r'^\d{4}-\d{2}-\d{2}$', start_date):
             try:
                 # Try to parse various date formats and convert to YYYY-MM-DD
-                from datetime import datetime, date, timedelta
+               
                 
                 # Check if it's just a number (like "20" for 20 days from now)
                 if re.match(r'^\d+$', start_date):
@@ -95,13 +106,13 @@ async def generate_itinerary2(request: Request):
                     
             except Exception as e:
                 # Final fallback: use future dates in ISO format (5 days from today)
-                from datetime import date, timedelta
+               
                 fallback_date = date.today() + timedelta(days=5)
                 start_date = fallback_date.isoformat()  # ISO format YYYY-MM-DD
                 print(f"⚠️ Date parsing error: {e}, using future ISO date: {start_date}")
     else:
         # If start_date is not a string, use future ISO format as last resort
-        from datetime import date, timedelta
+        
         fallback_date = date.today() + timedelta(days=5)
         start_date = fallback_date.isoformat()
         print(f"⚠️ start_date was not a string, using future ISO date: {start_date}")
